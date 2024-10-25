@@ -12,7 +12,7 @@ local function showMultijob()
         options = {
             {
                 title = locale('cl_lang_4'),
-                description = locale('cl_lang_5')': ' .. dutyStatus,
+                description = locale('cl_lang_5') .. ': ' .. dutyStatus,
                 icon = dutyIcon,
                 iconColor = colorIcon,
                 onSelect = function()
