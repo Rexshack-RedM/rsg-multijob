@@ -1,0 +1,31 @@
+{
+    "cl_lang_1": "En service",
+    "cl_lang_2": "Hors service",
+    "cl_lang_3": "Mes emplois",
+    "cl_lang_4": "Changer d'état",
+    "cl_lang_5": "État actuel",
+    "cl_lang_grade": "Rang",
+    "cl_lang_salary": "Salaire",
+    "cl_job_actions": "Actions d'emploi",
+    "cl_switch_job": "Changer d'emploi",
+    "cl_switch_your_job": "Changer votre emploi en",
+    "cl_delete_job": "Supprimer l'emploi",
+    "cl_delete_selected_job": "Supprimer l'emploi sélectionné",
+
+    "sv_command_desc": "Ouvre le menu des emplois",
+    "sv_current_job_error": "Vous avez déjà cet emploi attribué.",
+    "sv_invalid_job": "Emploi invalide",
+    "sv_job": "Votre emploi est maintenant",
+    "sv_job_max": "Vous avez atteint le nombre maximum d'emplois",
+    "sv_job_deleted": "Vous avez supprimé",
+    "sv_job_deleted_2": "l'emploi de votre menu",
+    "sv_job_specified": "Le joueur n'a pas l'emploi spécifié",
+
+    "sv_command_remove": "Supprimer un emploi du multitravail du joueur",
+    "sv_command_r_id": "ID du joueur",
+    "sv_command_r_name": "Nom de l'emploi",
+    "sv_provide": "Vous devez fournir un ID de joueur",
+    "sv_provide_name": "Vous devez fournir le nom de l'emploi à supprimer du joueur",
+    
+    "sv_not_online": "Le joueur n'est pas en ligne"
+}
