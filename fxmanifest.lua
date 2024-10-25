@@ -20,4 +20,8 @@ server_scripts {
     'server/versionchecker.lua'
 }
 
+files{
+    'locales/*.json'
+}
+
 lua54 'yes'

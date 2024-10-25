@@ -1,0 +1,31 @@
+{
+    "cl_lang_1" : "En Servicio",
+    "cl_lang_2" : "Fuera de Servicio",
+    "cl_lang_3" : "Mis Trabajos",
+    "cl_lang_4" : "Cambiar Estado",
+    "cl_lang_5" : "Estado Actual",
+    "cl_lang_grade" : "Rango",
+    "cl_lang_salary" : "Salario",
+    "cl_job_actions" : "Acciones de Trabajo",
+    "cl_switch_job" : "Cambiar de Trabajo",
+    "cl_switch_your_job" : "Cambiar tu trabajo a",
+    "cl_delete_job" : "Eliminar Trabajo",
+    "cl_delete_selected_job" : "Eliminar el trabajo seleccionado",
+
+    "sv_command_desc" : "Abre el menú de trabajos",
+    "sv_current_job_error" : "Ya tienes este trabajo asignado.",
+    "sv_invalid_job" : "Trabajo no válido",
+    "sv_job" : "Tu trabajo ahora es",
+    "sv_job_max" : "Tienes la cantidad máxima de trabajos",
+    "sv_job_deleted" : "Has eliminado",
+    "sv_job_deleted_2" : "trabajo de tu menú",
+    "sv_job_specified" : "El jugador no tiene el trabajo especificado",
+
+    "sv_command_remove" : "Eliminar un trabajo del multitrabajo del jugador",
+    "sv_command_r_id" : "ID del jugador",
+    "sv_command_r_name" : "Nombre del Trabajo",
+    "sv_provide" : "Debes proporcionar un ID de jugador",
+    "sv_provide_name" : "Debes proporcionar el nombre del trabajo para eliminar del jugador",
+    
+    "sv_not_online" : "El jugador no está en línea"
+}
