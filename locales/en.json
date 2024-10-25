@@ -1,0 +1,31 @@
+{
+    "cl_lang_1" : "On Duty",
+    "cl_lang_2" : "Off Duty",
+    "cl_lang_3" : "My Jobs",
+    "cl_lang_4" : "Toggle Duty",
+    "cl_lang_5" : "Current Status",
+    "cl_lang_grade" : "Grade",
+    "cl_lang_salary" : "Salary",
+    "cl_job_actions" : "Job Actions",
+    "cl_switch_job" : "Switch Job",
+    "cl_switch_your_job" : "Switch your job to",
+    "cl_delete_job" : "Delete Job",
+    "cl_delete_selected_job" : "Delete the selected job",
+
+    "sv_command_desc" : "Opens your job menu",
+    "sv_current_job_error" : "Your current job is already set to this.",
+    "sv_invalid_job" : "Invalid job",
+    "sv_job" : "Your job is now",
+    "sv_job_max" : "You have the max amount of jobs",
+    "sv_job_deleted" : "You deleted",
+    "sv_job_deleted_2" : "job from your menu",
+    "sv_job_specified" : "Player does not have the specified job",
+
+    "sv_command_remove" : "Remove a job from the players multijob",
+    "sv_command_r_id" : "ID of the player",
+    "sv_command_r_name" : "Name of Job",
+    "sv_provide" : "Must provide a player id",
+    "sv_provide_name" : "Must provide the name of the job to remove from the player",
+    
+    "sv_not_online" : "Player not online"
+}

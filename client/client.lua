@@ -1,17 +1,18 @@
 local Config = lib.require('config')
+lib.locale()
 
 local function showMultijob()
     local PlayerData = RSGCore.Functions.GetPlayerData()
-    local dutyStatus = PlayerData.job.onduty and 'On Duty' or 'Off Duty'
+    local dutyStatus = PlayerData.job.onduty and locale('cl_lang_1') or locale('cl_lang_2')
     local dutyIcon = PlayerData.job.onduty and 'fa-solid fa-toggle-on' or 'fa-solid fa-toggle-off'
     local colorIcon = PlayerData.job.onduty and '#5ff5b4' or 'red'
     local jobMenu = {
         id = 'job_menu',
-        title = 'My Jobs',
+        title = locale('cl_lang_3'),
         options = {
             {
-                title = 'Toggle Duty',
-                description = 'Current Status: ' .. dutyStatus,
+                title = locale('cl_lang_4'),
+                description = locale('cl_lang_5') .. ': ' .. dutyStatus,
                 icon = dutyIcon,
                 iconColor = colorIcon,
                 onSelect = function()
@@ -28,7 +29,7 @@ local function showMultijob()
             local isDisabled = PlayerData.job.name == job.job
             jobMenu.options[#jobMenu.options + 1] = {
                 title = job.jobLabel,
-                description = ('Grade: %s [%s]\nSalary: $%s'):format(job.gradeLabel, tonumber(job.grade), job.salary),
+                description = (locale('cl_lang_grade')..': %s [%s]\n'..locale('cl_lang_salary')..': $%s'):format(job.gradeLabel, tonumber(job.grade), job.salary),
                 icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase',
                 arrow = true,
                 disabled = isDisabled,
@@ -44,12 +45,12 @@ end
 AddEventHandler('rsg-multijob:client:choiceMenu', function(args)
     local displayChoices = {
         id = 'choice_menu',
-        title = 'Job Actions',
+        title = locale('cl_job_actions'),
         menu = 'job_menu',
         options = {
             {
-                title = 'Switch Job',
-                description = ('Switch your job to: %s'):format(args.jobLabel),
+                title = locale('cl_switch_job'),
+                description = (locale('cl_switch_your_job') .. ': %s'):format(args.jobLabel),
                 icon = 'fa-solid fa-circle-check',
                 onSelect = function()
                     TriggerServerEvent('rsg-multijob:server:changeJob', args.job)
@@ -58,8 +59,8 @@ AddEventHandler('rsg-multijob:client:choiceMenu', function(args)
                 end,
             },
             {
-                title = 'Delete Job',
-                description = ('Delete the selected job: %s'):format(args.jobLabel),
+                title = locale('cl_delete_job'),
+                description = (locale('cl_delete_selected_job') .. ': %s'):format(args.jobLabel),
                 icon = 'fa-solid fa-trash-can',
                 onSelect = function()
                     TriggerServerEvent('rsg-multijob:server:deleteJob', args.job)
