@@ -3,6 +3,15 @@ lib.locale()
 
 local function showMultijob()
     local PlayerData = RSGCore.Functions.GetPlayerData()
+
+    if PlayerData.metadata['injail'] > 0 then
+        return lib.notify({
+            title = 'Error',
+            description = 'You cannot do this while in jail.',
+            type = 'error',
+        })
+    end
+
     local dutyStatus = PlayerData.job.onduty and locale('cl_lang_1') or locale('cl_lang_2')
     local dutyIcon = PlayerData.job.onduty and 'fa-solid fa-toggle-on' or 'fa-solid fa-toggle-off'
     local colorIcon = PlayerData.job.onduty and '#5ff5b4' or 'red'

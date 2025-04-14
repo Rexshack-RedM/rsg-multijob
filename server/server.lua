@@ -11,14 +11,18 @@ RSGCore.Functions.CreateCallback('rsg-multijob:server:checkjobs', function(sourc
     local src = source
     local Player = RSGCore.Functions.GetPlayer(src)
     local citizenid = Player.PlayerData.citizenid
+    -- Look up allowed jobs; if not defined, use the default Config.MaxJobs.
+    local allowedJobs = Config.AllowedMultipleJobs[citizenid] or Config.MaxJobs
+
     local result = MySQL.query.await('SELECT COUNT(*) as jobCount FROM player_jobs WHERE citizenid = ?', { citizenid })
     local jobCount = result[1].jobCount
-    if jobCount < Config.MaxJobs then
+    if jobCount < allowedJobs then
         cb(true)
     else
         cb(false)
     end
 end)
+
 
 local function GetJobCount(cid)
     local result = MySQL.query.await('SELECT COUNT(*) as jobCount FROM player_jobs WHERE citizenid = ?', {cid})
@@ -110,7 +114,8 @@ RegisterNetEvent('rsg-multijob:server:newJob', function(newJob)
         return
     end
     
-    if GetJobCount(cid) >= Config.MaxJobs then
+    local allowedJobs = Config.AllowedMultipleJobs[cid] or Config.MaxJobs
+    if GetJobCount(cid) >= allowedJobs then
         TriggerClientEvent('ox_lib:notify', src, {title = locale('sv_job_max'), type = 'error', duration = 5000 })
         local previousJob = MySQL.query.await('SELECT job, grade FROM player_jobs WHERE citizenid = ? LIMIT 1', {cid})
         if previousJob[1] then
@@ -120,6 +125,7 @@ RegisterNetEvent('rsg-multijob:server:newJob', function(newJob)
         end
         return
     end
+    
 
     MySQL.insert.await('INSERT INTO player_jobs (citizenid, job, grade) VALUE (?, ?, ?)', {cid, newJob.name, newJob.grade.level})
 end)
