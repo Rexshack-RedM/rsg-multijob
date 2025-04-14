@@ -1,7 +1,17 @@
 RSGCore = exports['rsg-core']:GetCoreObject()
 
 return {
-    MaxJobs = 2,
+    MaxJobs = 1,
+    AllowedMultipleJobs = {
+        -- ['LVD86398'] = 5, 
+        -- ['QXG67827'] = 2, 
+        -- ['VFL05832'] = 2, 
+        -- ['YCS40333'] = 2,
+        -- ['KHS69755'] = 2,
+        -- ['FQS93449'] = 2,
+        -- ['KYJ85969'] = 2,
+        -- ['CBS40094'] = 2,
+    },
     JobIcons = {
         ['vallaw'] = 'fa-solid fa-shield',
         ['rholaw'] = 'fa-solid fa-shield',

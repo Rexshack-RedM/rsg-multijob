@@ -1,6 +1,7 @@
 # rsg-multijob
 - converted to work with RSG Framework
 - respect to the original creator Randolio : https://github.com/Randolio
+- max job limit available for users, ability for certain CID to have more than max job - Mafiaborn
 
 # Add SQL to your database
 ```sql
