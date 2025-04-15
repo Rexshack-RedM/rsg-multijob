@@ -23,7 +23,9 @@ local function CheckVersion()
         if text == currentVersion then
             versionCheckPrint('success', 'You are running the latest version.')
         else
-            versionCheckPrint('error', ('You are currently running an outdated version, please update to version %s'):format(text))
+            versionCheckPrint('error', ('You are currently running an outdated version, please update to version ' ..
+                string.char(27) .. "]8;;https://github.com/Rexshack-RedM/" .. GetCurrentResourceName() .. string.char(27) ..
+                "\\%s" .. string.char(27) .. "]8;;" .. string.char(27) .. "\\"):format(text))
         end
     end)
 end
