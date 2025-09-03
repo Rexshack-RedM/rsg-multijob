@@ -1,0 +1,31 @@
+{
+    "cl_lang_1" : "Em Serviço",
+    "cl_lang_2" : "Fora de Serviço",
+    "cl_lang_3" : "Meus Empregos",
+    "cl_lang_4" : "Alternar Serviço",
+    "cl_lang_5" : "Status Atual",
+    "cl_lang_grade" : "Cargo",
+    "cl_lang_salary" : "Salário",
+    "cl_job_actions" : "Ações do Emprego",
+    "cl_switch_job" : "Trocar de Emprego",
+    "cl_switch_your_job" : "Trocar seu emprego para",
+    "cl_delete_job" : "Deletar Emprego",
+    "cl_delete_selected_job" : "Deletar o emprego selecionado",
+
+    "sv_command_desc" : "Abre o seu menu de empregos",
+    "sv_current_job_error" : "Seu emprego atual já está definido para este.",
+    "sv_invalid_job" : "Emprego inválido",
+    "sv_job" : "Seu emprego agora é",
+    "sv_job_max" : "Você atingiu a quantidade máxima de empregos",
+    "sv_job_deleted" : "Você deletou o emprego",
+    "sv_job_deleted_2" : "do seu menu",
+    "sv_job_specified" : "O jogador não tem o emprego especificado",
+
+    "sv_command_remove" : "Remove um emprego do multi-emprego de um jogador",
+    "sv_command_r_id" : "ID do jogador",
+    "sv_command_r_name" : "Nome do Emprego",
+    "sv_provide" : "É necessário fornecer o ID de um jogador",
+    "sv_provide_name" : "É necessário fornecer o nome do emprego a ser removido do jogador",
+    
+    "sv_not_online" : "O jogador não está online"
+}
