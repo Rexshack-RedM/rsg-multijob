@@ -1,0 +1,31 @@
+{
+    "cl_lang_1" : "Na Służbie",
+    "cl_lang_2" : "Po Służbie",
+    "cl_lang_3" : "Moje Prace",
+    "cl_lang_4" : "Przełącz Służbę",
+    "cl_lang_5" : "Aktualny Status",
+    "cl_lang_grade" : "Stopień",
+    "cl_lang_salary" : "Pensja",
+    "cl_job_actions" : "Akcje Pracy",
+    "cl_switch_job" : "Zmień Pracę",
+    "cl_switch_your_job" : "Zmień swoją pracę na",
+    "cl_delete_job" : "Usuń Pracę",
+    "cl_delete_selected_job" : "Usuń wybraną pracę",
+
+    "sv_command_desc" : "Otwiera menu Twoich prac",
+    "sv_current_job_error" : "Twoja aktualna praca jest już ustawiona na tę.",
+    "sv_invalid_job" : "Nieprawidłowa praca",
+    "sv_job" : "Twoja praca to teraz",
+    "sv_job_max" : "Osiągnąłeś maksymalną ilość prac",
+    "sv_job_deleted" : "Usunąłeś",
+    "sv_job_deleted_2" : "pracę ze swojego menu",
+    "sv_job_specified" : "Gracz nie ma określonej pracy",
+
+    "sv_command_remove" : "Usuń pracę z multijoba gracza",
+    "sv_command_r_id" : "ID gracza",
+    "sv_command_r_name" : "Nazwa Pracy",
+    "sv_provide" : "Musisz podać ID gracza",
+    "sv_provide_name" : "Musisz podać nazwę pracy do usunięcia graczowi",
+    
+    "sv_not_online" : "Gracz nie jest online"
+}
