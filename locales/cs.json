@@ -1,0 +1,31 @@
+{
+    "cl_lang_1" : "Ve službě",
+    "cl_lang_2" : "Mimo službu",
+    "cl_lang_3" : "Moje práce",
+    "cl_lang_4" : "Přepnout službu",
+    "cl_lang_5" : "Aktuální stav",
+    "cl_lang_grade" : "Hodnost",
+    "cl_lang_salary" : "Plat",
+    "cl_job_actions" : "Akce práce",
+    "cl_switch_job" : "Změnit práci",
+    "cl_switch_your_job" : "Změnit svou práci na",
+    "cl_delete_job" : "Smazat práci",
+    "cl_delete_selected_job" : "Smazat vybranou práci",
+
+    "sv_command_desc" : "Otevře vaše pracovní menu",
+    "sv_current_job_error" : "Vaše aktuální práce je již nastavena na tuto.",
+    "sv_invalid_job" : "Neplatná práce",
+    "sv_job" : "Vaše práce je nyní",
+    "sv_job_max" : "Máte maximální počet prací",
+    "sv_job_deleted" : "Smazali jste",
+    "sv_job_deleted_2" : "práci z vašeho menu",
+    "sv_job_specified" : "Hráč nemá zadanou práci",
+
+    "sv_command_remove" : "Odebrat práci z více prací hráče",
+    "sv_command_r_id" : "ID hráče",
+    "sv_command_r_name" : "Název práce",
+    "sv_provide" : "Musíte zadat ID hráče",
+    "sv_provide_name" : "Musíte zadat název práce k odebrání hráči",
+    
+    "sv_not_online" : "Hráč není online"
+}
