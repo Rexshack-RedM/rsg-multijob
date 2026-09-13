@@ -11,6 +11,8 @@
     "cl_switch_your_job" : "Cambia il tuo lavoro in",
     "cl_delete_job" : "Elimina Lavoro",
     "cl_delete_selected_job" : "Elimina il lavoro selezionato",
+    "cl_jail_title" : "Errore",
+    "cl_jail_desc" : "Non puoi farlo mentre sei in prigione.",
 
     "sv_command_desc" : "Apre il menu del tuo lavoro",
     "sv_current_job_error" : "Il tuo lavoro attuale è già impostato su questo..",
@@ -20,12 +22,39 @@
     "sv_job_deleted" : "Hai cancellato",
     "sv_job_deleted_2" : "lavoro dal menu",
     "sv_job_specified" : "Il giocatore non ha il lavoro specificato",
+    "sv_job_removed_admin" : "Lavoro: %s è stato rimosso dall'ID: %s",
 
     "sv_command_remove" : "Rimuovi un lavoro dal multilavoro del giocatore",
     "sv_command_r_id" : "ID del giocatore",
     "sv_command_r_name" : "Nome del Lavoro",
     "sv_provide" : "Devi fornire un ID giocatore",
     "sv_provide_name" : "Devi fornire il nome del lavoro da rimuovere",
-    
-    "sv_not_online" : "Giocatore non online"
+
+    "sv_not_online" : "Giocatore non online",
+
+    "sv_wh_title_job_added" : "💼 Lavoro Aggiunto",
+    "sv_wh_title_job_switched" : "🔄 Lavoro Cambiato",
+    "sv_wh_title_job_deleted" : "🗑️ Lavoro Eliminato (Proprio)",
+    "sv_wh_title_job_max" : "⚠️ Limite di Lavori Raggiunto",
+    "sv_wh_title_admin_remove" : "🛠️ Admin Ha Rimosso un Lavoro",
+    "sv_wh_title_employee_fired" : "🔥 Dipendente Licenziato",
+
+    "sv_wh_field_player" : "Giocatore",
+    "sv_wh_field_citizenid" : "Citizen ID",
+    "sv_wh_field_discord" : "Discord",
+    "sv_wh_field_job" : "Lavoro",
+    "sv_wh_field_grade" : "Grado",
+    "sv_wh_field_new_active_job" : "Nuovo Lavoro Attivo",
+    "sv_wh_field_job_removed" : "Lavoro Rimosso",
+    "sv_wh_field_attempted_job" : "Lavoro Tentato",
+    "sv_wh_field_job_limit" : "Limite di Lavori",
+    "sv_wh_field_admin" : "Admin",
+    "sv_wh_field_admin_discord" : "Discord dell'Admin",
+    "sv_wh_field_target_id" : "ID Bersaglio",
+    "sv_wh_field_target_cid" : "Citizen ID Bersaglio",
+    "sv_wh_field_fired_by" : "Licenziato Da",
+    "sv_wh_field_boss_discord" : "Discord del Capo",
+
+    "sv_wh_unknown" : "Sconosciuto",
+    "sv_wh_na" : "N/D"
 }

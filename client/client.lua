@@ -6,8 +6,8 @@ local function showMultijob()
 
     if PlayerData.metadata['injail'] > 0 then
         return lib.notify({
-            title = 'Error',
-            description = 'You cannot do this while in jail.',
+            title = locale('cl_jail_title'),
+            description = locale('cl_jail_desc'),
             type = 'error',
         })
     end
@@ -32,23 +32,25 @@ local function showMultijob()
             },
         },
     }
+
     local myJobs = lib.callback.await('rsg-multijob:server:myJobs', false)
-    if myJobs then
+    if myJobs and #myJobs > 0 then
         for _, job in ipairs(myJobs) do
             local isDisabled = PlayerData.job.name == job.job
             jobMenu.options[#jobMenu.options + 1] = {
                 title = job.jobLabel,
-                description = (locale('cl_lang_grade')..': %s [%s]\n'..locale('cl_lang_salary')..': $%s'):format(job.gradeLabel, tonumber(job.grade), job.salary),
+                description = (locale('cl_lang_grade') .. ': %s [%s]\n' .. locale('cl_lang_salary') .. ': $%s'):format(job.gradeLabel, tonumber(job.grade), job.salary),
                 icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase',
                 arrow = true,
                 disabled = isDisabled,
                 event = 'rsg-multijob:client:choiceMenu',
-                args = {jobLabel = job.jobLabel, job = job.job, grade = job.grade},
+                args = { jobLabel = job.jobLabel, job = job.job, grade = job.grade },
             }
         end
-        lib.registerContext(jobMenu)
-        lib.showContext('job_menu')
     end
+
+    lib.registerContext(jobMenu)
+    lib.showContext('job_menu')
 end
 
 AddEventHandler('rsg-multijob:client:choiceMenu', function(args)
@@ -77,7 +79,7 @@ AddEventHandler('rsg-multijob:client:choiceMenu', function(args)
                     showMultijob()
                 end,
             },
-        }
+        },
     }
     lib.registerContext(displayChoices)
     lib.showContext('choice_menu')
@@ -88,5 +90,5 @@ RegisterNetEvent('RSGCore:Client:OnJobUpdate', function(JobInfo)
 end)
 
 RegisterNetEvent('rsg-multijob:client:openmenu', function()
-	showMultijob()
+    showMultijob()
 end)

@@ -11,6 +11,8 @@
     "cl_switch_your_job" : "Trocar seu emprego para",
     "cl_delete_job" : "Deletar Emprego",
     "cl_delete_selected_job" : "Deletar o emprego selecionado",
+    "cl_jail_title" : "Erro",
+    "cl_jail_desc" : "Você não pode fazer isso enquanto estiver na prisão.",
 
     "sv_command_desc" : "Abre o seu menu de empregos",
     "sv_current_job_error" : "Seu emprego atual já está definido para este.",
@@ -20,12 +22,39 @@
     "sv_job_deleted" : "Você deletou o emprego",
     "sv_job_deleted_2" : "do seu menu",
     "sv_job_specified" : "O jogador não tem o emprego especificado",
+    "sv_job_removed_admin" : "Emprego: %s foi removido do ID: %s",
 
     "sv_command_remove" : "Remove um emprego do multi-emprego de um jogador",
     "sv_command_r_id" : "ID do jogador",
     "sv_command_r_name" : "Nome do Emprego",
     "sv_provide" : "É necessário fornecer o ID de um jogador",
     "sv_provide_name" : "É necessário fornecer o nome do emprego a ser removido do jogador",
-    
-    "sv_not_online" : "O jogador não está online"
+
+    "sv_not_online" : "O jogador não está online",
+
+    "sv_wh_title_job_added" : "💼 Emprego Adicionado",
+    "sv_wh_title_job_switched" : "🔄 Emprego Trocado",
+    "sv_wh_title_job_deleted" : "🗑️ Emprego Removido (Próprio)",
+    "sv_wh_title_job_max" : "⚠️ Limite de Empregos Atingido",
+    "sv_wh_title_admin_remove" : "🛠️ Admin Removeu um Emprego",
+    "sv_wh_title_employee_fired" : "🔥 Funcionário Demitido",
+
+    "sv_wh_field_player" : "Jogador",
+    "sv_wh_field_citizenid" : "Citizen ID",
+    "sv_wh_field_discord" : "Discord",
+    "sv_wh_field_job" : "Emprego",
+    "sv_wh_field_grade" : "Cargo",
+    "sv_wh_field_new_active_job" : "Novo Emprego Ativo",
+    "sv_wh_field_job_removed" : "Emprego Removido",
+    "sv_wh_field_attempted_job" : "Emprego Tentado",
+    "sv_wh_field_job_limit" : "Limite de Empregos",
+    "sv_wh_field_admin" : "Admin",
+    "sv_wh_field_admin_discord" : "Discord do Admin",
+    "sv_wh_field_target_id" : "ID do Alvo",
+    "sv_wh_field_target_cid" : "Citizen ID do Alvo",
+    "sv_wh_field_fired_by" : "Demitido Por",
+    "sv_wh_field_boss_discord" : "Discord do Chefe",
+
+    "sv_wh_unknown" : "Desconhecido",
+    "sv_wh_na" : "N/D"
 }

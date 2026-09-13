@@ -11,6 +11,8 @@
     "cl_switch_your_job" : "Αλλάξτε τη δουλειά σας σε",
     "cl_delete_job" : "Διαγραφή Δουλειάς",
     "cl_delete_selected_job" : "Διαγραφή της επιλεγμένης δουλειάς",
+    "cl_jail_title" : "Σφάλμα",
+    "cl_jail_desc" : "Δεν μπορείς να το κάνεις αυτό ενώ είσαι στη φυλακή.",
 
     "sv_command_desc" : "Ανοίγει το μενού δουλειάς σου",
     "sv_current_job_error" : "Η τρέχουσα δουλειά σου είναι ήδη ρυθμισμένη σε αυτό.",
@@ -20,12 +22,39 @@
     "sv_job_deleted" : "Διέγραψες",
     "sv_job_deleted_2" : "δουλειά από το μενού σου",
     "sv_job_specified" : "Ο παίκτης δεν έχει την συγκεκριμένη δουλειά",
+    "sv_job_removed_admin" : "Δουλειά: %s αφαιρέθηκε από το ID: %s",
 
     "sv_command_remove" : "Αφαίρεση δουλειάς από το multijob του παίκτη",
     "sv_command_r_id" : "ID του παίκτη",
     "sv_command_r_name" : "Όνομα Δουλειάς",
     "sv_provide" : "Πρέπει να δώσεις ID παίκτη",
     "sv_provide_name" : "Πρέπει να δώσεις το όνομα της δουλειάς που θα αφαιρεθεί από τον παίκτη",
-    
-    "sv_not_online" : "Ο παίκτης δεν είναι συνδεδεμένος"
+
+    "sv_not_online" : "Ο παίκτης δεν είναι συνδεδεμένος",
+
+    "sv_wh_title_job_added" : "💼 Προστέθηκε Δουλειά",
+    "sv_wh_title_job_switched" : "🔄 Άλλαξε Δουλειά",
+    "sv_wh_title_job_deleted" : "🗑️ Διαγράφηκε Δουλειά (Ίδιος)",
+    "sv_wh_title_job_max" : "⚠️ Έφτασε το Όριο Δουλειών",
+    "sv_wh_title_admin_remove" : "🛠️ Ο Admin Αφαίρεσε Δουλειά",
+    "sv_wh_title_employee_fired" : "🔥 Απολύθηκε Υπάλληλος",
+
+    "sv_wh_field_player" : "Παίκτης",
+    "sv_wh_field_citizenid" : "Citizen ID",
+    "sv_wh_field_discord" : "Discord",
+    "sv_wh_field_job" : "Δουλειά",
+    "sv_wh_field_grade" : "Βαθμός",
+    "sv_wh_field_new_active_job" : "Νέα Ενεργή Δουλειά",
+    "sv_wh_field_job_removed" : "Δουλειά που Αφαιρέθηκε",
+    "sv_wh_field_attempted_job" : "Δουλειά που Επιχειρήθηκε",
+    "sv_wh_field_job_limit" : "Όριο Δουλειών",
+    "sv_wh_field_admin" : "Admin",
+    "sv_wh_field_admin_discord" : "Discord Admin",
+    "sv_wh_field_target_id" : "ID Στόχου",
+    "sv_wh_field_target_cid" : "Citizen ID Στόχου",
+    "sv_wh_field_fired_by" : "Απολύθηκε Από",
+    "sv_wh_field_boss_discord" : "Discord Αφεντικού",
+
+    "sv_wh_unknown" : "Άγνωστο",
+    "sv_wh_na" : "Δ/Υ"
 }
