@@ -11,8 +11,6 @@
     "cl_switch_your_job": "Changer votre emploi en",
     "cl_delete_job": "Supprimer l'emploi",
     "cl_delete_selected_job": "Supprimer l'emploi sélectionné",
-    "cl_jail_title": "Erreur",
-    "cl_jail_desc": "Vous ne pouvez pas faire cela en prison.",
 
     "sv_command_desc": "Ouvre le menu des emplois",
     "sv_current_job_error": "Vous avez déjà cet emploi attribué.",
@@ -22,39 +20,12 @@
     "sv_job_deleted": "Vous avez supprimé",
     "sv_job_deleted_2": "l'emploi de votre menu",
     "sv_job_specified": "Le joueur n'a pas l'emploi spécifié",
-    "sv_job_removed_admin": "Emploi : %s a été retiré de l'ID : %s",
 
     "sv_command_remove": "Supprimer un emploi du multitravail du joueur",
     "sv_command_r_id": "ID du joueur",
     "sv_command_r_name": "Nom de l'emploi",
     "sv_provide": "Vous devez fournir un ID de joueur",
     "sv_provide_name": "Vous devez fournir le nom de l'emploi à supprimer du joueur",
-
-    "sv_not_online": "Le joueur n'est pas en ligne",
-
-    "sv_wh_title_job_added": "💼 Emploi Ajouté",
-    "sv_wh_title_job_switched": "🔄 Emploi Changé",
-    "sv_wh_title_job_deleted": "🗑️ Emploi Supprimé (Soi-même)",
-    "sv_wh_title_job_max": "⚠️ Limite d'Emplois Atteinte",
-    "sv_wh_title_admin_remove": "🛠️ Emploi Retiré par un Admin",
-    "sv_wh_title_employee_fired": "🔥 Employé Renvoyé",
-
-    "sv_wh_field_player": "Joueur",
-    "sv_wh_field_citizenid": "Citizen ID",
-    "sv_wh_field_discord": "Discord",
-    "sv_wh_field_job": "Emploi",
-    "sv_wh_field_grade": "Rang",
-    "sv_wh_field_new_active_job": "Nouvel Emploi Actif",
-    "sv_wh_field_job_removed": "Emploi Retiré",
-    "sv_wh_field_attempted_job": "Emploi Tenté",
-    "sv_wh_field_job_limit": "Limite d'Emplois",
-    "sv_wh_field_admin": "Admin",
-    "sv_wh_field_admin_discord": "Discord de l'Admin",
-    "sv_wh_field_target_id": "ID de la Cible",
-    "sv_wh_field_target_cid": "Citizen ID de la Cible",
-    "sv_wh_field_fired_by": "Renvoyé Par",
-    "sv_wh_field_boss_discord": "Discord du Patron",
-
-    "sv_wh_unknown": "Inconnu",
-    "sv_wh_na": "N/D"
+    
+    "sv_not_online": "Le joueur n'est pas en ligne"
 }

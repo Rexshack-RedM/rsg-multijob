@@ -1,94 +1,91 @@
 local Config = lib.require('config')
 lib.locale()
 
-local function showMultijob()
-    local PlayerData = RSGCore.Functions.GetPlayerData()
+local isUIOpen = false
 
-    if PlayerData.metadata['injail'] > 0 then
-        return lib.notify({
-            title = locale('cl_jail_title'),
-            description = locale('cl_jail_desc'),
-            type = 'error',
-        })
-    end
-
-    local dutyStatus = PlayerData.job.onduty and locale('cl_lang_1') or locale('cl_lang_2')
-    local dutyIcon = PlayerData.job.onduty and 'fa-solid fa-toggle-on' or 'fa-solid fa-toggle-off'
-    local colorIcon = PlayerData.job.onduty and '#5ff5b4' or 'red'
-    local jobMenu = {
-        id = 'job_menu',
-        title = locale('cl_lang_3'),
-        options = {
-            {
-                title = locale('cl_lang_4'),
-                description = locale('cl_lang_5') .. ': ' .. dutyStatus,
-                icon = dutyIcon,
-                iconColor = colorIcon,
-                onSelect = function()
-                    TriggerServerEvent('RSGCore:ToggleDuty')
-                    Wait(500)
-                    showMultijob()
-                end,
-            },
-        },
-    }
-
-    local myJobs = lib.callback.await('rsg-multijob:server:myJobs', false)
-    if myJobs and #myJobs > 0 then
-        for _, job in ipairs(myJobs) do
-            local isDisabled = PlayerData.job.name == job.job
-            jobMenu.options[#jobMenu.options + 1] = {
-                title = job.jobLabel,
-                description = (locale('cl_lang_grade') .. ': %s [%s]\n' .. locale('cl_lang_salary') .. ': $%s'):format(job.gradeLabel, tonumber(job.grade), job.salary),
-                icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase',
-                arrow = true,
-                disabled = isDisabled,
-                event = 'rsg-multijob:client:choiceMenu',
-                args = { jobLabel = job.jobLabel, job = job.job, grade = job.grade },
-            }
+local function withIcons(jobs)
+    if jobs then
+        for _, job in ipairs(jobs) do
+            job.icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase'
         end
     end
-
-    lib.registerContext(jobMenu)
-    lib.showContext('job_menu')
+    return jobs or {}
 end
 
-AddEventHandler('rsg-multijob:client:choiceMenu', function(args)
-    local displayChoices = {
-        id = 'choice_menu',
-        title = locale('cl_job_actions'),
-        menu = 'job_menu',
-        options = {
-            {
-                title = locale('cl_switch_job'),
-                description = (locale('cl_switch_your_job') .. ': %s'):format(args.jobLabel),
-                icon = 'fa-solid fa-circle-check',
-                onSelect = function()
-                    TriggerServerEvent('rsg-multijob:server:changeJob', args.job)
-                    Wait(100)
-                    showMultijob()
-                end,
-            },
-            {
-                title = locale('cl_delete_job'),
-                description = (locale('cl_delete_selected_job') .. ': %s'):format(args.jobLabel),
-                icon = 'fa-solid fa-trash-can',
-                onSelect = function()
-                    TriggerServerEvent('rsg-multijob:server:deleteJob', args.job)
-                    Wait(100)
-                    showMultijob()
-                end,
-            },
-        },
-    }
-    lib.registerContext(displayChoices)
-    lib.showContext('choice_menu')
+-- Open the multijob UI
+local function showMultijob()
+    local PlayerData = RSGCore.Functions.GetPlayerData()
+    local myJobs = withIcons(lib.callback.await('rsg-multijob:server:myJobs', false))
+
+    SetNuiFocus(true, true)
+    isUIOpen = true
+
+    SendNUIMessage({
+        action = 'open',
+        jobs = myJobs,
+        currentJob = PlayerData.job.name,
+        onDuty = PlayerData.job.onduty,
+        maxJobs = Config.MaxJobs
+    })
+end
+
+-- Close UI callback
+RegisterNUICallback('closeUI', function(data, cb)
+    SetNuiFocus(false, false)
+    isUIOpen = false
+    cb('ok')
 end)
 
-RegisterNetEvent('RSGCore:Client:OnJobUpdate', function(JobInfo)
-    TriggerServerEvent('rsg-multijob:server:newJob', JobInfo)
+-- Toggle duty callback
+RegisterNUICallback('toggleDuty', function(data, cb)
+    TriggerServerEvent('RSGCore:ToggleDuty')
+    cb('ok')
 end)
 
+-- Switch job callback
+RegisterNUICallback('switchJob', function(data, cb)
+    TriggerServerEvent('rsg-multijob:server:changeJob', data.job)
+    cb('ok')
+end)
+
+-- Delete job callback
+RegisterNUICallback('deleteJob', function(data, cb)
+    TriggerServerEvent('rsg-multijob:server:deleteJob', data.job)
+    cb('ok')
+end)
+
+-- Event to open menu
 RegisterNetEvent('rsg-multijob:client:openmenu', function()
     showMultijob()
+end)
+
+-- Server pushes the up-to-date job list after any change (switch/add/delete/fire),
+-- instead of the client guessing a delay and re-fetching.
+RegisterNetEvent('rsg-multijob:client:refreshJobs', function(myJobs, currentJobName)
+    if not isUIOpen then return end
+
+    SendNUIMessage({
+        action = 'refreshJobs',
+        jobs = withIcons(myJobs),
+        currentJob = currentJobName
+    })
+end)
+
+-- Update job event
+RegisterNetEvent('RSGCore:Client:OnJobUpdate', function(JobInfo)
+    TriggerServerEvent('rsg-multijob:server:newJob', JobInfo)
+
+    if isUIOpen then
+        SendNUIMessage({
+            action = 'updateDuty',
+            onDuty = JobInfo.onduty
+        })
+    end
+end)
+
+-- Close UI on resource stop
+AddEventHandler('onResourceStop', function(resourceName)
+    if GetCurrentResourceName() == resourceName then
+        SetNuiFocus(false, false)
+    end
 end)

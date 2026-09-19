@@ -11,8 +11,6 @@
     "cl_switch_your_job" : "Switch your job to",
     "cl_delete_job" : "Delete Job",
     "cl_delete_selected_job" : "Delete the selected job",
-    "cl_jail_title" : "Error",
-    "cl_jail_desc" : "You cannot do this while in jail.",
 
     "sv_command_desc" : "Opens your job menu",
     "sv_current_job_error" : "Your current job is already set to this.",
@@ -22,39 +20,12 @@
     "sv_job_deleted" : "You deleted",
     "sv_job_deleted_2" : "job from your menu",
     "sv_job_specified" : "Player does not have the specified job",
-    "sv_job_removed_admin" : "Job: %s was removed from ID: %s",
 
     "sv_command_remove" : "Remove a job from the players multijob",
     "sv_command_r_id" : "ID of the player",
     "sv_command_r_name" : "Name of Job",
     "sv_provide" : "Must provide a player id",
     "sv_provide_name" : "Must provide the name of the job to remove from the player",
-
-    "sv_not_online" : "Player not online",
-
-    "sv_wh_title_job_added" : "💼 Job Added",
-    "sv_wh_title_job_switched" : "🔄 Job Switched",
-    "sv_wh_title_job_deleted" : "🗑️ Job Deleted (Self)",
-    "sv_wh_title_job_max" : "⚠️ Multijob Limit Reached",
-    "sv_wh_title_admin_remove" : "🛠️ Admin Removed Job",
-    "sv_wh_title_employee_fired" : "🔥 Employee Fired",
-
-    "sv_wh_field_player" : "Player",
-    "sv_wh_field_citizenid" : "Citizen ID",
-    "sv_wh_field_discord" : "Discord",
-    "sv_wh_field_job" : "Job",
-    "sv_wh_field_grade" : "Grade",
-    "sv_wh_field_new_active_job" : "New Active Job",
-    "sv_wh_field_job_removed" : "Job Removed",
-    "sv_wh_field_attempted_job" : "Attempted Job",
-    "sv_wh_field_job_limit" : "Job Limit",
-    "sv_wh_field_admin" : "Admin",
-    "sv_wh_field_admin_discord" : "Admin Discord",
-    "sv_wh_field_target_id" : "Target ID",
-    "sv_wh_field_target_cid" : "Target CID",
-    "sv_wh_field_fired_by" : "Fired By",
-    "sv_wh_field_boss_discord" : "Boss Discord",
-
-    "sv_wh_unknown" : "Unknown",
-    "sv_wh_na" : "N/A"
+    
+    "sv_not_online" : "Player not online"
 }

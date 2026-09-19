@@ -11,8 +11,6 @@
     "cl_switch_your_job" : "Cambiar tu trabajo a",
     "cl_delete_job" : "Eliminar Trabajo",
     "cl_delete_selected_job" : "Eliminar el trabajo seleccionado",
-    "cl_jail_title" : "Error",
-    "cl_jail_desc" : "No puedes hacer esto mientras estás en la cárcel.",
 
     "sv_command_desc" : "Abre el menú de trabajos",
     "sv_current_job_error" : "Ya tienes este trabajo asignado.",
@@ -22,39 +20,12 @@
     "sv_job_deleted" : "Has eliminado",
     "sv_job_deleted_2" : "trabajo de tu menú",
     "sv_job_specified" : "El jugador no tiene el trabajo especificado",
-    "sv_job_removed_admin" : "Trabajo: %s fue eliminado del ID: %s",
 
     "sv_command_remove" : "Eliminar un trabajo del multitrabajo del jugador",
     "sv_command_r_id" : "ID del jugador",
     "sv_command_r_name" : "Nombre del Trabajo",
     "sv_provide" : "Debes proporcionar un ID de jugador",
     "sv_provide_name" : "Debes proporcionar el nombre del trabajo para eliminar del jugador",
-
-    "sv_not_online" : "El jugador no está en línea",
-
-    "sv_wh_title_job_added" : "💼 Trabajo Añadido",
-    "sv_wh_title_job_switched" : "🔄 Trabajo Cambiado",
-    "sv_wh_title_job_deleted" : "🗑️ Trabajo Eliminado (Propio)",
-    "sv_wh_title_job_max" : "⚠️ Límite de Trabajos Alcanzado",
-    "sv_wh_title_admin_remove" : "🛠️ Admin Eliminó un Trabajo",
-    "sv_wh_title_employee_fired" : "🔥 Empleado Despedido",
-
-    "sv_wh_field_player" : "Jugador",
-    "sv_wh_field_citizenid" : "Citizen ID",
-    "sv_wh_field_discord" : "Discord",
-    "sv_wh_field_job" : "Trabajo",
-    "sv_wh_field_grade" : "Rango",
-    "sv_wh_field_new_active_job" : "Nuevo Trabajo Activo",
-    "sv_wh_field_job_removed" : "Trabajo Eliminado",
-    "sv_wh_field_attempted_job" : "Trabajo Intentado",
-    "sv_wh_field_job_limit" : "Límite de Trabajos",
-    "sv_wh_field_admin" : "Admin",
-    "sv_wh_field_admin_discord" : "Discord del Admin",
-    "sv_wh_field_target_id" : "ID del Objetivo",
-    "sv_wh_field_target_cid" : "Citizen ID del Objetivo",
-    "sv_wh_field_fired_by" : "Despedido Por",
-    "sv_wh_field_boss_discord" : "Discord del Jefe",
-
-    "sv_wh_unknown" : "Desconocido",
-    "sv_wh_na" : "N/D"
+    
+    "sv_not_online" : "El jugador no está en línea"
 }
