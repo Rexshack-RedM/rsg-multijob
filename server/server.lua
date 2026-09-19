@@ -355,3 +355,132 @@ AddEventHandler('playerDropped', function()
     local Player = RSGCore.Functions.GetPlayer(source)
     if Player then switchCooldowns[Player.PlayerData.citizenid] = nil end
 end)
+
+-----------------------------------------------------------------------
+-- Exports: AddJob / RemoveJob / GetJobs
+-- For use by external resources (e.g. shops, quests, admin tools) that
+-- need to grant or revoke a multijob without going through the menu.
+-----------------------------------------------------------------------
+
+-- Resolves `identifier` (a server id for an online player, or a citizenid
+-- string for either an online or offline player) to a citizenid + the
+-- online Player object if one exists.
+local function ResolvePlayer(identifier)
+    local Player = nil
+
+    if type(identifier) == 'number' then
+        Player = RSGCore.Functions.GetPlayer(identifier)
+    elseif type(identifier) == 'string' then
+        Player = RSGCore.Functions.GetPlayerByCitizenId(identifier)
+    end
+
+    local cid = Player and Player.PlayerData.citizenid or (type(identifier) == 'string' and identifier or nil)
+    return cid, Player
+end
+
+--- Grants (or upgrades) a job on a player's stored multijob list.
+--- @param identifier number|string  server id of an online player, or a citizenid (online or offline)
+--- @param job string  job name, must exist in RSGCore.Shared.Jobs
+--- @param grade number|nil  grade level, defaults to 0
+--- @param bypassMax boolean|nil  if true, skips the Config.MaxJobs limit
+--- @return boolean success
+--- @return string|nil errorReason  'invalid_job' | 'invalid_grade' | 'player_not_found' | 'max_jobs'
+local function AddJob(identifier, job, grade, bypassMax)
+    grade = tonumber(grade) or 0
+
+    if type(job) ~= 'string' or not RSGCore.Shared.Jobs[job] then
+        return false, 'invalid_job'
+    end
+
+    local jobInfo = RSGCore.Shared.Jobs[job]
+    local gradeInfo = jobInfo.grades[tostring(grade)]
+    if not gradeInfo then
+        return false, 'invalid_grade'
+    end
+
+    local cid, Player = ResolvePlayer(identifier)
+    if not cid then
+        return false, 'player_not_found'
+    end
+
+    local existing = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
+
+    if existing[1] then
+        MySQL.query.await('UPDATE player_jobs SET grade = ? WHERE citizenid = ? AND job = ?', { grade, cid, job })
+    else
+        if not bypassMax and GetJobCount(cid) >= Config.MaxJobs then
+            return false, 'max_jobs'
+        end
+
+        MySQL.insert.await('INSERT INTO player_jobs (citizenid, job, grade) VALUES (?, ?, ?)', { cid, job, grade })
+    end
+
+    Webhook.Send('JobAdded', {
+        description = ('**%s** was granted the job **%s** via export.'):format(Player and GetCharName(Player) or ('`%s`'):format(cid), jobInfo.label),
+        fields = {
+            { name = 'Player', value = ('`%s`'):format(cid), inline = true },
+            { name = 'Job', value = ('%s — %s'):format(jobInfo.label, gradeInfo.name), inline = true },
+        }
+    })
+
+    if Player then PushJobs(Player.PlayerData.source, Player) end
+
+    return true, nil
+end
+
+--- Removes a job from a player's stored multijob list. If it's the
+--- player's currently active job and they're online, they're set to
+--- unemployed.
+--- @param identifier number|string  server id of an online player, or a citizenid (online or offline)
+--- @param job string  job name to remove
+--- @return boolean success
+--- @return string|nil errorReason  'invalid_job' | 'player_not_found' | 'job_not_held'
+local function RemoveJob(identifier, job)
+    if type(job) ~= 'string' then
+        return false, 'invalid_job'
+    end
+
+    local cid, Player = ResolvePlayer(identifier)
+    if not cid then
+        return false, 'player_not_found'
+    end
+
+    local existing = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
+    if not existing[1] then
+        return false, 'job_not_held'
+    end
+
+    MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
+
+    local jobInfo = RSGCore.Shared.Jobs[job]
+    Webhook.Send('JobRemovedByAdmin', {
+        description = ('The job **%s** was removed from **%s** via export.'):format(jobInfo and jobInfo.label or job, Player and GetCharName(Player) or ('`%s`'):format(cid)),
+        fields = {
+            { name = 'Player', value = ('`%s`'):format(cid), inline = true },
+            { name = 'Job', value = jobInfo and jobInfo.label or job, inline = true },
+        }
+    })
+
+    if Player then
+        if Player.PlayerData.job.name == job then
+            Player.Functions.SetJob('unemployed', 0)
+        end
+        PushJobs(Player.PlayerData.source, Player)
+    end
+
+    return true, nil
+end
+
+--- Returns a player's stored multijob list (same shape as the menu uses).
+--- @param identifier number|string  server id of an online player, or a citizenid (online or offline)
+--- @return table jobs  array of { job, salary, jobLabel, gradeLabel, grade }
+local function GetJobs(identifier)
+    local cid = ResolvePlayer(identifier)
+    if not cid then return {} end
+
+    return BuildJobList(cid)
+end
+
+exports('AddJob', AddJob)
+exports('RemoveJob', RemoveJob)
+exports('GetJobs', GetJobs)

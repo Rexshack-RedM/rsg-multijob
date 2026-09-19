@@ -106,3 +106,22 @@ Jobs are added to a player's multijob list automatically: whenever RSGCore fires
 ### Firing employees
 
 If you use `rsg-bossmenu`, firing an employee through it also removes that job from the fired player's multijob registry — whether they're online or offline — as long as the person doing the firing actually holds a boss grade in that job and outranks the target.
+
+### Exports (for other resources)
+
+`rsg-multijob` exposes server-side exports so other scripts can grant or revoke jobs without going through the UI or duplicating the DB logic. `identifier` accepts either an online player's server id (number) or a `citizenid` (string) — a citizenid works whether the player is online or offline.
+
+```lua
+-- Add (or upgrade) a job. grade defaults to 0. bypassMax (optional) skips Config.MaxJobs.
+-- Returns: success (boolean), errorReason ('invalid_job' | 'invalid_grade' | 'player_not_found' | 'max_jobs')
+local success, err = exports['rsg-multijob']:AddJob(identifier, 'gunsmith', 0, false)
+
+-- Remove a job. If it's the player's active job and they're online, they become 'unemployed'.
+-- Returns: success (boolean), errorReason ('invalid_job' | 'player_not_found' | 'job_not_held')
+local success, err = exports['rsg-multijob']:RemoveJob(identifier, 'gunsmith')
+
+-- Read a player's stored multijob list: array of { job, salary, jobLabel, gradeLabel, grade }
+local jobs = exports['rsg-multijob']:GetJobs(identifier)
+```
+
+Both `AddJob` and `RemoveJob` push a live UI refresh to the player if they're online, and log to the configured Discord webhook the same way the in-game actions do.
