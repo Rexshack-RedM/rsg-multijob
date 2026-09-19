@@ -26,6 +26,19 @@ local function CanSetJob(cid, jobName)
     return false, nil
 end
 
+-- Best-effort display name for webhook logs: falls back to the Rockstar/account
+-- name if charinfo isn't populated (e.g. an offline citizenid lookup elsewhere).
+local function GetCharName(Player)
+    if not Player then return 'Unknown' end
+
+    local info = Player.PlayerData.charinfo
+    if info and (info.firstname or info.lastname) then
+        return (('%s %s'):format(info.firstname or '', info.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')
+    end
+
+    return GetPlayerName(Player.PlayerData.source) or 'Unknown'
+end
+
 -- Returns whether `src` currently holds a boss-grade in `jobName`
 local function IsBossOf(Player, jobName)
     if not Player or Player.PlayerData.job.name ~= jobName then return false end
@@ -103,31 +116,31 @@ RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
 
     if readyAt and now < readyAt then
         local secondsLeft = math.ceil((readyAt - now) / 1000)
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ON COOLDOWN", ("You can switch jobs again in %ss"):format(secondsLeft), "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_cooldown'), locale('sv_cooldown_desc'):format(secondsLeft), "generic_textures", "tick", 5000)
         return
     end
 
     if Player.PlayerData.job.name == job then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "CURRENT JOB", "You are already working this job", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_current_job'), locale('sv_current_job_error'), "generic_textures", "tick", 5000)
         return
     end
 
     local jobInfo = RSGCore.Shared.Jobs[job]
     if not jobInfo then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "INVALID JOB", "This job does not exist", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_invalid_job'), locale('sv_invalid_job_desc'), "generic_textures", "tick", 5000)
         return
     end
 
     local canSet, grade = CanSetJob(cid, job)
 
     if not canSet then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "You do not hold this job", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_hold_job'), "generic_textures", "tick", 5000)
         return
     end
 
     local gradeInfo = jobInfo.grades[tostring(grade)]
     if not gradeInfo then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Invalid grade for this job", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_invalid_grade'), "generic_textures", "tick", 5000)
         return
     end
 
@@ -136,7 +149,17 @@ RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
     Player.Functions.SetJob(job, grade)
     Player.Functions.SetJobDuty(false)
     TriggerClientEvent('RSGCore:Client:SetDuty', src, false)
-    TriggerClientEvent('rNotify:NotifyLeft', src, "JOB CHANGED", "Current Job: " .. jobInfo.label, "generic_textures", "tick", 5000)
+    TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_job_changed'), locale('sv_job') .. ': ' .. jobInfo.label, "generic_textures", "tick", 5000)
+
+    Webhook.Send('JobSwitched', {
+        description = ('**%s** switched their active job to **%s**.'):format(GetCharName(Player), jobInfo.label),
+        fields = {
+            { name = 'Player', value = ('%s (`%s`)'):format(GetCharName(Player), cid), inline = true },
+            { name = 'Server ID', value = tostring(src), inline = true },
+            { name = 'New Job', value = ('%s — %s'):format(jobInfo.label, gradeInfo.name), inline = true },
+        }
+    })
+
     PushJobs(src, Player)
 end)
 
@@ -158,11 +181,21 @@ RegisterNetEvent('rsg-multijob:server:newJob', function(newJob)
     end
 
     if GetJobCount(cid) >= Config.MaxJobs then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "MAX JOBS", "You have reached the maximum number of jobs", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_max_jobs'), locale('sv_job_max'), "generic_textures", "tick", 5000)
         return
     end
 
     MySQL.insert.await('INSERT INTO player_jobs (citizenid, job, grade) VALUES (?, ?, ?)', { cid, newJob.name, newJob.grade.level })
+
+    Webhook.Send('JobAdded', {
+        description = ('**%s** was granted the job **%s**.'):format(GetCharName(Player), RSGCore.Shared.Jobs[newJob.name].label),
+        fields = {
+            { name = 'Player', value = ('%s (`%s`)'):format(GetCharName(Player), cid), inline = true },
+            { name = 'Server ID', value = tostring(src), inline = true },
+            { name = 'Job', value = ('%s — %s'):format(RSGCore.Shared.Jobs[newJob.name].label, newJob.grade.name or tostring(newJob.grade.level)), inline = true },
+        }
+    })
+
     PushJobs(src, Player)
 end)
 
@@ -175,14 +208,23 @@ RegisterNetEvent('rsg-multijob:server:deleteJob', function(job)
 
     local canSet = CanSetJob(Player.PlayerData.citizenid, job)
     if not canSet then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "You do not hold this job", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_hold_job'), "generic_textures", "tick", 5000)
         return
     end
 
     MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { Player.PlayerData.citizenid, job })
 
     local jobInfo = RSGCore.Shared.Jobs[job]
-    TriggerClientEvent('rNotify:NotifyLeft', src, "JOB DELETED", "You have removed " .. (jobInfo and jobInfo.label or job) .. " from your jobs", "generic_textures", "tick", 5000)
+    TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_job_deleted'), locale('sv_job_deleted') .. ' ' .. (jobInfo and jobInfo.label or job) .. ' ' .. locale('sv_job_deleted_2'), "generic_textures", "tick", 5000)
+
+    Webhook.Send('JobDeleted', {
+        description = ('**%s** removed the job **%s** from their own menu.'):format(GetCharName(Player), jobInfo and jobInfo.label or job),
+        fields = {
+            { name = 'Player', value = ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid), inline = true },
+            { name = 'Server ID', value = tostring(src), inline = true },
+            { name = 'Job', value = jobInfo and jobInfo.label or job, inline = true },
+        }
+    })
 
     if Player.PlayerData.job.name == job then
         Player.Functions.SetJob('unemployed', 0)
@@ -208,6 +250,17 @@ RegisterNetEvent('rsg-bossmenu:server:FireEmployee', function(target)
 
         MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { Employee.PlayerData.citizenid, oldJob })
         Employee.Functions.SetJob('unemployed', 0)
+
+        local jobInfo = RSGCore.Shared.Jobs[oldJob]
+        Webhook.Send('EmployeeFired', {
+            description = ('**%s** fired **%s** from **%s**.'):format(GetCharName(Player), GetCharName(Employee), jobInfo and jobInfo.label or oldJob),
+            fields = {
+                { name = 'Fired By', value = ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid), inline = true },
+                { name = 'Employee', value = ('%s (`%s`)'):format(GetCharName(Employee), Employee.PlayerData.citizenid), inline = true },
+                { name = 'Job', value = jobInfo and jobInfo.label or oldJob, inline = true },
+            }
+        })
+
         PushJobs(Employee.PlayerData.source, Employee)
     else
         local player = MySQL.query.await('SELECT * FROM players WHERE citizenid = ? LIMIT 1', { target })
@@ -219,13 +272,24 @@ RegisterNetEvent('rsg-bossmenu:server:FireEmployee', function(target)
         if offlineJob.grade.level > Player.PlayerData.job.grade.level then return end
 
         MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { target, offlineJob.name })
+
+        local jobInfo = RSGCore.Shared.Jobs[offlineJob.name]
+        local offlineCharName = (player[1].charinfo and json.decode(player[1].charinfo)) or nil
+        Webhook.Send('EmployeeFired', {
+            description = ('**%s** fired an offline employee from **%s**.'):format(GetCharName(Player), jobInfo and jobInfo.label or offlineJob.name),
+            fields = {
+                { name = 'Fired By', value = ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid), inline = true },
+                { name = 'Employee', value = ('`%s`%s'):format(target, offlineCharName and (' (' .. (offlineCharName.firstname or '') .. ' ' .. (offlineCharName.lastname or '') .. ')') or ''), inline = true },
+                { name = 'Job', value = jobInfo and jobInfo.label or offlineJob.name, inline = true },
+            }
+        })
     end
 end)
 
 local function adminRemoveJob(src, id, job)
     local Player = RSGCore.Functions.GetPlayer(id)
     if not Player then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Player not online", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_online'), "generic_textures", "tick", 5000)
         return
     end
 
@@ -233,12 +297,23 @@ local function adminRemoveJob(src, id, job)
     local result = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
 
     if not result[1] then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Job not found for specified player", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_job_specified'), "generic_textures", "tick", 5000)
         return
     end
 
     MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
-    TriggerClientEvent('rNotify:NotifyLeft', src, "JOB REMOVED", "Job: " .. job .. " was removed from ID: " .. id, "generic_textures", "tick", 5000)
+    TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_job_removed'), locale('sv_job_removed_desc'):format(job, id), "generic_textures", "tick", 5000)
+
+    local AdminPlayer = RSGCore.Functions.GetPlayer(src)
+    local jobInfo = RSGCore.Shared.Jobs[job]
+    Webhook.Send('JobRemovedByAdmin', {
+        description = ('An admin removed the job **%s** from **%s**.'):format(jobInfo and jobInfo.label or job, GetCharName(Player)),
+        fields = {
+            { name = 'Admin', value = AdminPlayer and ('%s (`%s`)'):format(GetCharName(AdminPlayer), AdminPlayer.PlayerData.citizenid) or ('Server ID `%s`'):format(tostring(src)), inline = true },
+            { name = 'Target Player', value = ('%s (`%s`) — ID %s'):format(GetCharName(Player), cid, tostring(id)), inline = true },
+            { name = 'Job', value = jobInfo and jobInfo.label or job, inline = true },
+        }
+    })
 
     if Player.PlayerData.job.name == job then
         Player.Functions.SetJob('unemployed', 0)
@@ -251,25 +326,25 @@ RSGCore.Commands.Add('removejob', locale('sv_command_remove'), { { name = 'id', 
     local src = source
 
     if not args[1] then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Please provide an ID", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_provide'), "generic_textures", "tick", 5000)
         return
     end
 
     if not args[2] then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Please provide a job name", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_provide_name'), "generic_textures", "tick", 5000)
         return
     end
 
     local id = tonumber(args[1])
     if not id then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Invalid ID", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_invalid_id'), "generic_textures", "tick", 5000)
         return
     end
 
     local Player = RSGCore.Functions.GetPlayer(id)
 
     if not Player then
-        TriggerClientEvent('rNotify:NotifyLeft', src, "ERROR", "Player not online", "generic_textures", "tick", 5000)
+        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_online'), "generic_textures", "tick", 5000)
         return
     end
 

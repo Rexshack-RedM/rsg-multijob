@@ -33,5 +33,57 @@ return {
         ['merchant'] = 'fa-solid fa-shield',
         ['barber'] = 'fa-solid fa-shield',
         ['tailor'] = 'fa-solid fa-shield',
+    },
+
+    -----------------------------------------------------------------------
+    -- Discord Webhook Logging
+    -----------------------------------------------------------------------
+    Webhooks = {
+        Enabled = true, -- master on/off switch for all webhook logging
+
+        -- Used for any event below that doesn't have its own URL set
+        DefaultURL = '', -- e.g. 'https://discord.com/api/webhooks/XXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+
+        BotName = 'RSG MultiJob',
+        BotAvatar = '', -- URL to an image, leave blank for Discord default
+        FooterText = 'rsg-multijob',
+        FooterIcon = '',
+        DefaultColor = 3092790, -- decimal RGB, used if an event has no Color set
+
+        -- Per-event configuration. Set `URL` on an event to route it to a
+        -- different Discord channel than DefaultURL, or set `Enabled = false`
+        -- to silence just that one event.
+        Events = {
+            JobAdded = {
+                Enabled = true,
+                URL = '',
+                Title = '📋 Job Added',
+                Color = 3066993, -- green
+            },
+            JobSwitched = {
+                Enabled = true,
+                URL = '',
+                Title = '🔁 Job Switched',
+                Color = 3447003, -- blue
+            },
+            JobDeleted = {
+                Enabled = true,
+                URL = '',
+                Title = '🗑️ Job Deleted',
+                Color = 15158332, -- red
+            },
+            JobRemovedByAdmin = {
+                Enabled = true,
+                URL = '',
+                Title = '🛠️ Job Removed (Admin)',
+                Color = 15105570, -- orange
+            },
+            EmployeeFired = {
+                Enabled = true,
+                URL = '',
+                Title = '🔥 Employee Fired',
+                Color = 10038562, -- dark red
+            },
+        }
     }
 }

@@ -2,6 +2,70 @@ let currentJob = null;
 let selectedJob = null;
 let confirmCallback = null;
 
+// Populated from the server's locale files via the 'open' NUI message.
+let L = {
+    pageTitle: 'Wild West Jobs',
+    myJobs: 'My Jobs',
+    subtitle: 'Employment Registry',
+    close: 'Close',
+    back: 'Back',
+    dutyLabel: 'Duty Status',
+    dutyOn: 'On Duty',
+    dutyOff: 'Off Duty',
+    capacityLabel: 'Registry Capacity',
+    maxJobsFooter: 'Max Jobs:',
+    jobActions: 'Job Actions',
+    selectAction: 'Select an action',
+    switchJob: 'Switch Job',
+    switchDesc: 'Make this your active job',
+    deleteJob: 'Delete Job',
+    deleteDesc: 'Remove from your jobs',
+    confirmTitle: 'Are you sure?',
+    confirmText: 'This action cannot be undone.',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    noJobsTitle: 'No Jobs Found',
+    noJobsSub: "You haven't registered any jobs yet.",
+    currentPill: 'Current',
+    grade: 'Grade',
+    salary: 'Salary',
+    switchConfirmTitle: 'Switch Job?',
+    switchConfirmText: 'Are you sure you want to switch to %s?',
+    deleteConfirmTitle: 'Delete Job?',
+    deleteConfirmText: 'Are you sure you want to remove %s from your jobs? This cannot be undone.',
+    notice: 'Notice'
+};
+
+function fmt(str, value) {
+    return (str || '').replace('%s', value);
+}
+
+function applyLocale(locales) {
+    if (!locales) return;
+    L = Object.assign({}, L, locales);
+
+    document.title = L.pageTitle;
+    document.getElementById('pageTitle').textContent = L.pageTitle;
+    document.getElementById('panelTitle').textContent = L.myJobs;
+    document.getElementById('panelSubtitle').textContent = L.subtitle;
+    document.getElementById('closeBtn').title = L.close;
+    document.getElementById('choiceCloseBtn').title = L.close;
+    document.getElementById('backBtn').title = L.back;
+    document.getElementById('dutyLabel').textContent = L.dutyLabel;
+    document.getElementById('capacityLabel').textContent = L.capacityLabel;
+    document.getElementById('maxJobsFooterLabel').textContent = L.maxJobsFooter;
+    document.getElementById('choiceTitle').textContent = L.jobActions;
+    document.getElementById('choiceSubtitle').textContent = L.selectAction;
+    document.getElementById('switchJobTitle').textContent = L.switchJob;
+    document.getElementById('switchJobDesc').textContent = L.switchDesc;
+    document.getElementById('deleteJobTitle').textContent = L.deleteJob;
+    document.getElementById('deleteJobDesc').textContent = L.deleteDesc;
+    document.getElementById('confirmTitle').textContent = L.confirmTitle;
+    document.getElementById('confirmText').textContent = L.confirmText;
+    document.getElementById('confirmYesLabel').textContent = L.confirm;
+    document.getElementById('confirmNoLabel').textContent = L.cancel;
+}
+
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
 function isVisible(el) { return !el.classList.contains('hidden'); }
@@ -79,7 +143,7 @@ function showToast(type, label, message) {
     const toast = document.createElement('div');
     toast.className = 'toast toast-' + (type || 'info');
     toast.innerHTML = '<span class="toast-label"></span><div class="toast-msg"></div>';
-    toast.querySelector('.toast-label').textContent = label || type || 'Notice';
+    toast.querySelector('.toast-label').textContent = label || type || L.notice;
     toast.querySelector('.toast-msg').textContent = message || '';
     stack.appendChild(toast);
 
@@ -97,12 +161,12 @@ function updateDutyStatus(onDuty) {
 
     if (onDuty) {
         dutyIcon.innerHTML = '<i class="fa-solid fa-toggle-on"></i>';
-        dutyStatus.textContent = 'On Duty';
+        dutyStatus.textContent = L.dutyOn;
         dutyStatus.className = 'row-desc duty-status on-duty';
         dutyIndicator.className = 'duty-indicator on-duty';
     } else {
         dutyIcon.innerHTML = '<i class="fa-solid fa-toggle-off"></i>';
-        dutyStatus.textContent = 'Off Duty';
+        dutyStatus.textContent = L.dutyOff;
         dutyStatus.className = 'row-desc duty-status off-duty';
         dutyIndicator.className = 'duty-indicator off-duty';
     }
@@ -148,12 +212,12 @@ function createJobCard(job, isCurrentJob) {
     const gradeDesc = document.createElement('div');
     gradeDesc.className = 'row-desc';
     const gradeEm = document.createElement('i');
-    gradeEm.textContent = `Grade: ${job.gradeLabel} [${job.grade}]`;
+    gradeEm.textContent = `${L.grade}: ${job.gradeLabel} [${job.grade}]`;
     gradeDesc.appendChild(gradeEm);
 
     const salaryDesc = document.createElement('div');
     salaryDesc.className = 'row-desc job-salary';
-    salaryDesc.textContent = `Salary: $${job.salary}`;
+    salaryDesc.textContent = `${L.salary}: $${job.salary}`;
 
     rowMain.appendChild(title);
     rowMain.appendChild(gradeDesc);
@@ -165,7 +229,7 @@ function createJobCard(job, isCurrentJob) {
     if (isCurrentJob) {
         const pill = document.createElement('span');
         pill.className = 'pill';
-        pill.textContent = 'Current';
+        pill.textContent = L.currentPill;
         card.appendChild(pill);
     } else {
         const arrow = document.createElement('div');
@@ -186,12 +250,29 @@ function renderJobs(jobs, currentJobName) {
     container.innerHTML = '';
 
     if (!jobs || jobs.length === 0) {
-        container.innerHTML =
-            '<div class="no-jobs">' +
-                '<div class="no-jobs-icon"><i class="fa-solid fa-briefcase"></i></div>' +
-                '<div class="no-jobs-text">No Jobs Found</div>' +
-                '<div class="no-jobs-subtext"><i>You haven\'t registered any jobs yet.</i></div>' +
-            '</div>';
+        container.innerHTML = '';
+        const noJobs = document.createElement('div');
+        noJobs.className = 'no-jobs';
+
+        const noJobsIcon = document.createElement('div');
+        noJobsIcon.className = 'no-jobs-icon';
+        noJobsIcon.innerHTML = '<i class="fa-solid fa-briefcase"></i>';
+
+        const noJobsText = document.createElement('div');
+        noJobsText.className = 'no-jobs-text';
+        noJobsText.textContent = L.noJobsTitle;
+
+        const noJobsSubtext = document.createElement('div');
+        noJobsSubtext.className = 'no-jobs-subtext';
+        const noJobsSubtextEm = document.createElement('i');
+        noJobsSubtextEm.textContent = L.noJobsSub;
+        noJobsSubtext.appendChild(noJobsSubtextEm);
+
+        noJobs.appendChild(noJobsIcon);
+        noJobs.appendChild(noJobsText);
+        noJobs.appendChild(noJobsSubtext);
+        container.appendChild(noJobs);
+
         const maxEl = document.getElementById('maxJobs');
         updateCapacity(0, maxEl ? maxEl.textContent : 6);
         return;
@@ -237,6 +318,8 @@ function showConfirm(title, text, callback) {
 function hideConfirm() {
     hide(document.getElementById('confirmModal'));
     confirmCallback = null;
+    document.getElementById('confirmTitle').textContent = L.confirmTitle;
+    document.getElementById('confirmText').textContent = L.confirmText;
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -264,8 +347,8 @@ document.getElementById('switchJobBtn').addEventListener('click', function() {
     if (!selectedJob) return;
 
     showConfirm(
-        'Switch Job?',
-        `Are you sure you want to switch to ${selectedJob.jobLabel}?`,
+        L.switchConfirmTitle,
+        fmt(L.switchConfirmText, selectedJob.jobLabel),
         function() {
             fetch(`https://${GetParentResourceName()}/switchJob`, {
                 method: 'POST',
@@ -282,8 +365,8 @@ document.getElementById('deleteJobBtn').addEventListener('click', function() {
     if (!selectedJob) return;
 
     showConfirm(
-        'Delete Job?',
-        `Are you sure you want to remove ${selectedJob.jobLabel} from your jobs? This cannot be undone.`,
+        L.deleteConfirmTitle,
+        fmt(L.deleteConfirmText, selectedJob.jobLabel),
         function() {
             fetch(`https://${GetParentResourceName()}/deleteJob`, {
                 method: 'POST',
@@ -345,6 +428,7 @@ window.addEventListener('message', function(event) {
     const data = event.data;
 
     if (data.action === 'open') {
+        applyLocale(data.locales);
         openUI();
 
         updateDutyStatus(data.onDuty);
@@ -371,6 +455,6 @@ window.addEventListener('message', function(event) {
     }
 
     if (data.action === 'notify') {
-        showToast(data.type || 'info', data.label || 'Notice', data.message || '');
+        showToast(data.type || 'info', data.label || L.notice, data.message || '');
     }
 });

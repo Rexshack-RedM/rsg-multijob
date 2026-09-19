@@ -12,6 +12,42 @@ local function withIcons(jobs)
     return jobs or {}
 end
 
+-- Builds the localized UI text table sent to the NUI
+local function getUILocales()
+    return {
+        pageTitle = locale('cl_ui_page_title'),
+        myJobs = locale('cl_lang_3'),
+        subtitle = locale('cl_ui_subtitle'),
+        close = locale('cl_ui_close'),
+        back = locale('cl_ui_back'),
+        dutyLabel = locale('cl_lang_4'),
+        dutyOn = locale('cl_lang_1'),
+        dutyOff = locale('cl_lang_2'),
+        capacityLabel = locale('cl_ui_capacity_label'),
+        maxJobsFooter = locale('cl_ui_max_jobs_footer'),
+        jobActions = locale('cl_job_actions'),
+        selectAction = locale('cl_ui_select_action'),
+        switchJob = locale('cl_switch_job'),
+        switchDesc = locale('cl_switch_your_job'),
+        deleteJob = locale('cl_delete_job'),
+        deleteDesc = locale('cl_delete_selected_job'),
+        confirmTitle = locale('cl_ui_confirm_title'),
+        confirmText = locale('cl_ui_confirm_text'),
+        confirm = locale('cl_ui_confirm'),
+        cancel = locale('cl_ui_cancel'),
+        noJobsTitle = locale('cl_ui_no_jobs_title'),
+        noJobsSub = locale('cl_ui_no_jobs_sub'),
+        currentPill = locale('cl_ui_current_pill'),
+        grade = locale('cl_lang_grade'),
+        salary = locale('cl_lang_salary'),
+        switchConfirmTitle = locale('cl_ui_switch_confirm_title'),
+        switchConfirmText = locale('cl_ui_switch_confirm_text'),
+        deleteConfirmTitle = locale('cl_ui_delete_confirm_title'),
+        deleteConfirmText = locale('cl_ui_delete_confirm_text'),
+        notice = locale('cl_ui_notice'),
+    }
+end
+
 -- Open the multijob UI
 local function showMultijob()
     local PlayerData = RSGCore.Functions.GetPlayerData()
@@ -25,7 +61,8 @@ local function showMultijob()
         jobs = myJobs,
         currentJob = PlayerData.job.name,
         onDuty = PlayerData.job.onduty,
-        maxJobs = Config.MaxJobs
+        maxJobs = Config.MaxJobs,
+        locales = getUILocales()
     })
 end
 
