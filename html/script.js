@@ -1,69 +1,65 @@
-let currentJob = null;
 let selectedJob = null;
 let confirmCallback = null;
 
-// Populated from the server's locale files via the 'open' NUI message.
-let L = {
-    pageTitle: 'Wild West Jobs',
-    myJobs: 'My Jobs',
-    subtitle: 'Employment Registry',
-    close: 'Close',
-    back: 'Back',
-    dutyLabel: 'Duty Status',
-    dutyOn: 'On Duty',
-    dutyOff: 'Off Duty',
-    capacityLabel: 'Registry Capacity',
-    maxJobsFooter: 'Max Jobs:',
-    jobActions: 'Job Actions',
-    selectAction: 'Select an action',
-    switchJob: 'Switch Job',
-    switchDesc: 'Make this your active job',
-    deleteJob: 'Delete Job',
-    deleteDesc: 'Remove from your jobs',
-    confirmTitle: 'Are you sure?',
-    confirmText: 'This action cannot be undone.',
-    confirm: 'Confirm',
-    cancel: 'Cancel',
-    noJobsTitle: 'No Jobs Found',
-    noJobsSub: "You haven't registered any jobs yet.",
-    currentPill: 'Current',
-    grade: 'Grade',
-    salary: 'Salary',
-    switchConfirmTitle: 'Switch Job?',
-    switchConfirmText: 'Are you sure you want to switch to %s?',
-    deleteConfirmTitle: 'Delete Job?',
-    deleteConfirmText: 'Are you sure you want to remove %s from your jobs? This cannot be undone.',
-    notice: 'Notice'
-};
+// Filled from locales/<lang>.json (ui_* keys) via the 'open' NUI message.
+let L = {};
 
 function fmt(str, value) {
     return (str || '').replace('%s', value);
 }
 
+function post(endpoint, data) {
+    return fetch(`https://${GetParentResourceName()}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data || {})
+    }).catch(function() {});
+}
+
+// Elements whose text comes straight from a locale key
+const TEXT_BINDINGS = {
+    panelTitle: 'ui_my_jobs',
+    panelSubtitle: 'ui_subtitle',
+    dutyLabel: 'ui_duty_label',
+    capacityLabel: 'ui_capacity_label',
+    maxJobsFooterLabel: 'ui_max_jobs_footer',
+    choiceTitle: 'ui_job_actions',
+    choiceSubtitle: 'ui_select_action',
+    switchJobTitle: 'ui_switch_job',
+    switchJobDesc: 'ui_switch_desc',
+    deleteJobTitle: 'ui_delete_job',
+    deleteJobDesc: 'ui_delete_desc',
+    confirmTitle: 'ui_confirm_title',
+    confirmText: 'ui_confirm_text',
+    confirmYesLabel: 'ui_confirm',
+    confirmNoLabel: 'ui_cancel'
+};
+
+const TITLE_BINDINGS = {
+    closeBtn: 'ui_close',
+    choiceCloseBtn: 'ui_close',
+    backBtn: 'ui_back',
+    dragHandle: 'ui_drag_hint',
+    choiceDragHandle: 'ui_drag_hint'
+};
+
+function t(key) {
+    return L[key] || '';
+}
+
 function applyLocale(locales) {
     if (!locales) return;
-    L = Object.assign({}, L, locales);
+    L = locales;
 
-    document.title = L.pageTitle;
-    document.getElementById('pageTitle').textContent = L.pageTitle;
-    document.getElementById('panelTitle').textContent = L.myJobs;
-    document.getElementById('panelSubtitle').textContent = L.subtitle;
-    document.getElementById('closeBtn').title = L.close;
-    document.getElementById('choiceCloseBtn').title = L.close;
-    document.getElementById('backBtn').title = L.back;
-    document.getElementById('dutyLabel').textContent = L.dutyLabel;
-    document.getElementById('capacityLabel').textContent = L.capacityLabel;
-    document.getElementById('maxJobsFooterLabel').textContent = L.maxJobsFooter;
-    document.getElementById('choiceTitle').textContent = L.jobActions;
-    document.getElementById('choiceSubtitle').textContent = L.selectAction;
-    document.getElementById('switchJobTitle').textContent = L.switchJob;
-    document.getElementById('switchJobDesc').textContent = L.switchDesc;
-    document.getElementById('deleteJobTitle').textContent = L.deleteJob;
-    document.getElementById('deleteJobDesc').textContent = L.deleteDesc;
-    document.getElementById('confirmTitle').textContent = L.confirmTitle;
-    document.getElementById('confirmText').textContent = L.confirmText;
-    document.getElementById('confirmYesLabel').textContent = L.confirm;
-    document.getElementById('confirmNoLabel').textContent = L.cancel;
+    document.title = t('ui_page_title');
+    Object.keys(TEXT_BINDINGS).forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t(TEXT_BINDINGS[id]);
+    });
+    Object.keys(TITLE_BINDINGS).forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.title = t(TITLE_BINDINGS[id]);
+    });
 }
 
 function show(el) { el.classList.remove('hidden'); }
@@ -71,87 +67,85 @@ function hide(el) { el.classList.add('hidden'); }
 function isVisible(el) { return !el.classList.contains('hidden'); }
 
 // ==================== DRAG FUNCTIONALITY ====================
+// Both panels share one offset (applied as a transform), so the menu stays
+// where the player left it when switching panels or reopening.
+const DRAG_KEY = 'rsg-multijob:offset';
+let dragOffset = { x: 0, y: 0 };
+
+try {
+    const saved = JSON.parse(localStorage.getItem(DRAG_KEY));
+    if (saved && isFinite(saved.x) && isFinite(saved.y)) dragOffset = saved;
+} catch (e) {}
+
+function panels() {
+    return [document.getElementById('mainContainer'), document.getElementById('choiceContainer')];
+}
+
+function applyOffset() {
+    panels().forEach(function(el) {
+        el.style.transform = `translate(${dragOffset.x}px, ${dragOffset.y}px)`;
+    });
+}
+
+// Keep at least part of the header on screen
+function clampOffset(el) {
+    el.style.transform = 'none';
+    const r = el.getBoundingClientRect();
+    const margin = 60;
+    const minX = margin - r.right, maxX = window.innerWidth - margin - r.left;
+    const minY = -r.top, maxY = window.innerHeight - margin - r.top;
+    dragOffset.x = Math.min(maxX, Math.max(minX, dragOffset.x));
+    dragOffset.y = Math.min(maxY, Math.max(minY, dragOffset.y));
+}
+
+function saveOffset() {
+    try { localStorage.setItem(DRAG_KEY, JSON.stringify(dragOffset)); } catch (e) {}
+}
+
 function makeDraggable(element, handle) {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    let isDragging = false;
+    let startX = 0, startY = 0, baseX = 0, baseY = 0;
 
-    handle.onmousedown = dragMouseDown;
-
-    function dragMouseDown(e) {
-        if (e.target.closest('.circle-btn')) return;
+    handle.addEventListener('mousedown', function(e) {
+        if (e.button !== 0 || e.target.closest('.circle-btn')) return;
         e.preventDefault();
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        baseX = dragOffset.x;
+        baseY = dragOffset.y;
+        element.classList.add('dragging');
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
 
-        document.onmouseup = closeDragElement;
-        document.onmousemove = elementDrag;
+    function onMove(e) {
+        dragOffset.x = baseX + (e.clientX - startX);
+        dragOffset.y = baseY + (e.clientY - startY);
+        clampOffset(element);
+        applyOffset();
     }
 
-    function elementDrag(e) {
-        if (!isDragging) return;
-        e.preventDefault();
-
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-
-        const stage = element.parentElement;
-        element.style.position = 'relative';
-
-        let newTop = element.offsetTop - pos2;
-        let newLeft = element.offsetLeft - pos1;
-
-        const maxX = Math.max(0, (stage ? stage.offsetWidth : window.innerWidth) - element.offsetWidth);
-        const maxY = Math.max(0, (stage ? stage.offsetHeight : window.innerHeight) - element.offsetHeight);
-
-        newTop = Math.max(-200, Math.min(newTop, maxY + 200));
-        newLeft = Math.max(-200, Math.min(newLeft, maxX + 200));
-
-        element.style.top = newTop + 'px';
-        element.style.left = newLeft + 'px';
-    }
-
-    function closeDragElement() {
-        isDragging = false;
-        document.onmouseup = null;
-        document.onmousemove = null;
+    function onUp() {
+        element.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        saveOffset();
     }
 }
 
-function resetPanelPosition(el) {
-    el.style.position = '';
-    el.style.top = '';
-    el.style.left = '';
+// Double-click a header to put the menu back in the centre
+function resetOffset() {
+    dragOffset = { x: 0, y: 0 };
+    applyOffset();
+    saveOffset();
 }
 
-// Initialize draggable elements
 document.addEventListener('DOMContentLoaded', function() {
-    const mainContainer = document.getElementById('mainContainer');
-    const dragHandle = document.getElementById('dragHandle');
-    const choiceContainer = document.getElementById('choiceContainer');
-    const choiceDragHandle = document.getElementById('choiceDragHandle');
-
-    makeDraggable(mainContainer, dragHandle);
-    makeDraggable(choiceContainer, choiceDragHandle);
+    makeDraggable(document.getElementById('mainContainer'), document.getElementById('dragHandle'));
+    makeDraggable(document.getElementById('choiceContainer'), document.getElementById('choiceDragHandle'));
+    document.getElementById('dragHandle').addEventListener('dblclick', resetOffset);
+    document.getElementById('choiceDragHandle').addEventListener('dblclick', resetOffset);
+    applyOffset();
 });
-
-// ==================== TOASTS ====================
-function showToast(type, label, message) {
-    const stack = document.getElementById('toasts');
-    const toast = document.createElement('div');
-    toast.className = 'toast toast-' + (type || 'info');
-    toast.innerHTML = '<span class="toast-label"></span><div class="toast-msg"></div>';
-    toast.querySelector('.toast-label').textContent = label || type || L.notice;
-    toast.querySelector('.toast-msg').textContent = message || '';
-    stack.appendChild(toast);
-
-    setTimeout(function() {
-        toast.classList.add('toast-out');
-        setTimeout(function() { toast.remove(); }, 260);
-    }, 3200);
-}
 
 // ==================== UI UPDATES ====================
 function updateDutyStatus(onDuty) {
@@ -161,12 +155,12 @@ function updateDutyStatus(onDuty) {
 
     if (onDuty) {
         dutyIcon.innerHTML = '<i class="fa-solid fa-toggle-on"></i>';
-        dutyStatus.textContent = L.dutyOn;
+        dutyStatus.textContent = t('ui_on_duty');
         dutyStatus.className = 'row-desc duty-status on-duty';
         dutyIndicator.className = 'duty-indicator on-duty';
     } else {
         dutyIcon.innerHTML = '<i class="fa-solid fa-toggle-off"></i>';
-        dutyStatus.textContent = L.dutyOff;
+        dutyStatus.textContent = t('ui_off_duty');
         dutyStatus.className = 'row-desc duty-status off-duty';
         dutyIndicator.className = 'duty-indicator off-duty';
     }
@@ -191,7 +185,7 @@ function updateCapacity(count, max) {
 
 function createJobCard(job, isCurrentJob) {
     const card = document.createElement('div');
-    card.className = 'row-card job-card' + (isCurrentJob ? ' current-job disabled' : '');
+    card.className = 'row-card job-card' + (isCurrentJob ? ' current-job' : '');
     card.dataset.job = job.job;
     card.dataset.jobLabel = job.jobLabel;
     card.dataset.grade = job.grade;
@@ -212,12 +206,12 @@ function createJobCard(job, isCurrentJob) {
     const gradeDesc = document.createElement('div');
     gradeDesc.className = 'row-desc';
     const gradeEm = document.createElement('i');
-    gradeEm.textContent = `${L.grade}: ${job.gradeLabel} [${job.grade}]`;
+    gradeEm.textContent = `${t('ui_grade')}: ${job.gradeLabel} [${job.grade}]`;
     gradeDesc.appendChild(gradeEm);
 
     const salaryDesc = document.createElement('div');
     salaryDesc.className = 'row-desc job-salary';
-    salaryDesc.textContent = `${L.salary}: $${job.salary}`;
+    salaryDesc.textContent = `${t('ui_salary')}: $${job.salary}`;
 
     rowMain.appendChild(title);
     rowMain.appendChild(gradeDesc);
@@ -229,18 +223,19 @@ function createJobCard(job, isCurrentJob) {
     if (isCurrentJob) {
         const pill = document.createElement('span');
         pill.className = 'pill';
-        pill.textContent = L.currentPill;
+        pill.textContent = t('ui_current_pill');
         card.appendChild(pill);
-    } else {
-        const arrow = document.createElement('div');
-        arrow.className = 'row-arrow';
-        arrow.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
-        card.appendChild(arrow);
-
-        card.addEventListener('click', function() {
-            openChoiceMenu(job);
-        });
     }
+
+    const arrow = document.createElement('div');
+    arrow.className = 'row-arrow';
+    arrow.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+    card.appendChild(arrow);
+
+    // The current job can still be opened so it can be resigned (deleted)
+    card.addEventListener('click', function() {
+        openChoiceMenu(job, isCurrentJob);
+    });
 
     return card;
 }
@@ -250,7 +245,6 @@ function renderJobs(jobs, currentJobName) {
     container.innerHTML = '';
 
     if (!jobs || jobs.length === 0) {
-        container.innerHTML = '';
         const noJobs = document.createElement('div');
         noJobs.className = 'no-jobs';
 
@@ -260,12 +254,12 @@ function renderJobs(jobs, currentJobName) {
 
         const noJobsText = document.createElement('div');
         noJobsText.className = 'no-jobs-text';
-        noJobsText.textContent = L.noJobsTitle;
+        noJobsText.textContent = t('ui_no_jobs_title');
 
         const noJobsSubtext = document.createElement('div');
         noJobsSubtext.className = 'no-jobs-subtext';
         const noJobsSubtextEm = document.createElement('i');
-        noJobsSubtextEm.textContent = L.noJobsSub;
+        noJobsSubtextEm.textContent = t('ui_no_jobs_sub');
         noJobsSubtext.appendChild(noJobsSubtextEm);
 
         noJobs.appendChild(noJobsIcon);
@@ -290,13 +284,13 @@ function renderJobs(jobs, currentJobName) {
 }
 
 // ==================== CHOICE MENU ====================
-function openChoiceMenu(job) {
+function openChoiceMenu(job, isCurrentJob) {
     selectedJob = job;
+    document.getElementById('switchJobBtn').classList.toggle('hidden', !!isCurrentJob);
 
     hide(document.getElementById('mainContainer'));
     const choice = document.getElementById('choiceContainer');
     show(choice);
-    resetPanelPosition(choice);
     document.getElementById('choiceJobName').textContent = job.jobLabel;
 }
 
@@ -318,8 +312,8 @@ function showConfirm(title, text, callback) {
 function hideConfirm() {
     hide(document.getElementById('confirmModal'));
     confirmCallback = null;
-    document.getElementById('confirmTitle').textContent = L.confirmTitle;
-    document.getElementById('confirmText').textContent = L.confirmText;
+    document.getElementById('confirmTitle').textContent = t('ui_confirm_title');
+    document.getElementById('confirmText').textContent = t('ui_confirm_text');
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -336,25 +330,17 @@ document.getElementById('backBtn').addEventListener('click', function() {
 });
 
 document.getElementById('dutyToggle').addEventListener('click', function() {
-    fetch(`https://${GetParentResourceName()}/toggleDuty`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-    });
+    post('toggleDuty');
 });
 
 document.getElementById('switchJobBtn').addEventListener('click', function() {
     if (!selectedJob) return;
 
     showConfirm(
-        L.switchConfirmTitle,
-        fmt(L.switchConfirmText, selectedJob.jobLabel),
+        t('ui_switch_confirm_title'),
+        fmt(t('ui_switch_confirm_text'), selectedJob.jobLabel),
         function() {
-            fetch(`https://${GetParentResourceName()}/switchJob`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ job: selectedJob.job })
-            });
+            post('switchJob', { job: selectedJob.job });
             hideConfirm();
             closeChoiceMenu();
         }
@@ -365,14 +351,10 @@ document.getElementById('deleteJobBtn').addEventListener('click', function() {
     if (!selectedJob) return;
 
     showConfirm(
-        L.deleteConfirmTitle,
-        fmt(L.deleteConfirmText, selectedJob.jobLabel),
+        t('ui_delete_confirm_title'),
+        fmt(t('ui_delete_confirm_text'), selectedJob.jobLabel),
         function() {
-            fetch(`https://${GetParentResourceName()}/deleteJob`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ job: selectedJob.job })
-            });
+            post('deleteJob', { job: selectedJob.job });
             hideConfirm();
             closeChoiceMenu();
         }
@@ -380,9 +362,9 @@ document.getElementById('deleteJobBtn').addEventListener('click', function() {
 });
 
 document.getElementById('confirmYes').addEventListener('click', function() {
-    if (confirmCallback) {
-        confirmCallback();
-    }
+    const cb = confirmCallback;
+    confirmCallback = null; // prevent double-submit
+    if (cb) cb();
 });
 
 document.getElementById('confirmNo').addEventListener('click', function() {
@@ -391,7 +373,7 @@ document.getElementById('confirmNo').addEventListener('click', function() {
 
 // Close on escape key
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && isVisible(document.getElementById('app'))) {
         if (isVisible(document.getElementById('confirmModal'))) {
             hideConfirm();
         } else if (isVisible(document.getElementById('choiceContainer'))) {
@@ -408,7 +390,7 @@ function openUI() {
     show(document.getElementById('mainContainer'));
     hide(document.getElementById('choiceContainer'));
     hide(document.getElementById('confirmModal'));
-    resetPanelPosition(document.getElementById('mainContainer'));
+    applyOffset();
 }
 
 function closeUI() {
@@ -417,11 +399,7 @@ function closeUI() {
     hideConfirm();
     hide(document.getElementById('app'));
 
-    fetch(`https://${GetParentResourceName()}/closeUI`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-    });
+    post('closeUI');
 }
 
 window.addEventListener('message', function(event) {
@@ -435,14 +413,6 @@ window.addEventListener('message', function(event) {
         document.getElementById('maxJobs').textContent = data.maxJobs || 6;
         document.getElementById('maxJobsFooter').textContent = data.maxJobs || 6;
         renderJobs(data.jobs, data.currentJob);
-        currentJob = data.currentJob;
-    }
-
-    if (data.action === 'close') {
-        hide(document.getElementById('mainContainer'));
-        hide(document.getElementById('choiceContainer'));
-        hideConfirm();
-        hide(document.getElementById('app'));
     }
 
     if (data.action === 'updateDuty') {
@@ -451,10 +421,5 @@ window.addEventListener('message', function(event) {
 
     if (data.action === 'refreshJobs') {
         renderJobs(data.jobs, data.currentJob);
-        currentJob = data.currentJob;
-    }
-
-    if (data.action === 'notify') {
-        showToast(data.type || 'info', data.label || L.notice, data.message || '');
     }
 });

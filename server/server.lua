@@ -1,45 +1,65 @@
 local Config = lib.require('config')
 lib.locale()
 
--- citizenid -> timestamp (ms) the player may next switch jobs
-local switchCooldowns = {}
+-----------------------------------------------------------------------
+-- State
+-----------------------------------------------------------------------
 
-RSGCore.Commands.Add('myjobs', locale('sv_command_desc'), {}, false, function(source)
-    local src = source
-    TriggerClientEvent('rsg-multijob:client:openmenu', src)
-end)
+local switchCooldowns = {} -- citizenid -> GetGameTimer() value the player may next switch jobs
+local actionThrottle = {}  -- source -> GetGameTimer() of last menu action (anti-spam)
+local ACTION_THROTTLE_MS = 750
 
-local function GetJobCount(cid)
-    local result = MySQL.query.await('SELECT COUNT(*) as jobCount FROM player_jobs WHERE citizenid = ?', { cid })
-    return result[1] and result[1].jobCount or 0
+-----------------------------------------------------------------------
+-- Helpers
+-----------------------------------------------------------------------
+
+local function Notify(src, title, description, nType)
+    TriggerClientEvent('ox_lib:notify', src, {
+        title = title,
+        description = description,
+        type = nType or 'inform',
+        duration = 5000,
+    })
 end
 
-local function CanSetJob(cid, jobName)
-    local jobs = MySQL.query.await('SELECT job, grade FROM player_jobs WHERE citizenid = ?', { cid })
-    if not jobs then return false, nil end
-
-    for _, jobData in ipairs(jobs) do
-        if jobData.job == jobName then
-            return true, jobData.grade
-        end
+local function IsThrottled(src)
+    local now = GetGameTimer()
+    if actionThrottle[src] and now - actionThrottle[src] < ACTION_THROTTLE_MS then
+        return true
     end
-    return false, nil
+    actionThrottle[src] = now
+    return false
 end
 
--- Best-effort display name for webhook logs: falls back to the Rockstar/account
--- name if charinfo isn't populated (e.g. an offline citizenid lookup elsewhere).
+local function JobLabel(job)
+    local info = RSGCore.Shared.Jobs[job]
+    return info and info.label or job
+end
+
+local function IsValidJobName(job)
+    return type(job) == 'string' and job ~= 'unemployed' and RSGCore.Shared.Jobs[job] ~= nil
+end
+
+-- Best-effort display name for webhook logs
 local function GetCharName(Player)
-    if not Player then return 'Unknown' end
+    if not Player then return locale('wh_unknown') end
 
     local info = Player.PlayerData.charinfo
     if info and (info.firstname or info.lastname) then
         return (('%s %s'):format(info.firstname or '', info.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')
     end
 
-    return GetPlayerName(Player.PlayerData.source) or 'Unknown'
+    return GetPlayerName(Player.PlayerData.source) or locale('wh_unknown')
 end
 
--- Returns whether `src` currently holds a boss-grade in `jobName`
+local function PlayerTag(Player, cid)
+    if Player then
+        return ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid)
+    end
+    return ('`%s`'):format(cid)
+end
+
+-- Whether Player currently holds a boss grade in jobName
 local function IsBossOf(Player, jobName)
     if not Player or Player.PlayerData.job.name ~= jobName then return false end
 
@@ -50,51 +70,156 @@ local function IsBossOf(Player, jobName)
     return grade ~= nil and grade.isboss == true
 end
 
--- Builds the { job, salary, jobLabel, gradeLabel, grade } list for a player's stored jobs
-local function BuildJobList(citizenid)
-    local storeJobs = {}
-    local result = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ?', { citizenid })
+-----------------------------------------------------------------------
+-- Database
+-----------------------------------------------------------------------
 
-    for _, v in ipairs(result) do
-        local job = RSGCore.Shared.Jobs[v.job]
+local function GetJobCount(cid)
+    return MySQL.scalar.await('SELECT COUNT(*) FROM player_jobs WHERE citizenid = ?', { cid }) or 0
+end
+
+-- Stored grade for job on cid, or nil if not held
+local function GetStoredGrade(cid, job)
+    local grade = MySQL.scalar.await('SELECT grade FROM player_jobs WHERE citizenid = ? AND job = ? LIMIT 1', { cid, job })
+    return grade and tonumber(grade) or nil
+end
+
+-- Builds the { job, salary, jobLabel, gradeLabel, grade } list for a player's stored jobs
+local function BuildJobList(cid)
+    local list = {}
+    local rows = MySQL.query.await('SELECT job, grade FROM player_jobs WHERE citizenid = ?', { cid }) or {}
+
+    for _, row in ipairs(rows) do
+        local job = RSGCore.Shared.Jobs[row.job]
+        local grade = job and job.grades[tostring(row.grade)]
 
         if not job then
-            print(('[rsg-multijob] WARNING: Missing job from jobs.lua: "%s" | Citizen ID: %s'):format(v.job, citizenid))
-            goto continue
+            print(('[rsg-multijob] WARNING: Missing job from jobs.lua: "%s" | Citizen ID: %s'):format(row.job, cid))
+        elseif not grade then
+            print(('[rsg-multijob] WARNING: Missing grade %s for job "%s" | Citizen ID: %s'):format(row.grade, row.job, cid))
+        else
+            list[#list + 1] = {
+                job = row.job,
+                salary = grade.payment,
+                jobLabel = job.label,
+                gradeLabel = grade.name,
+                grade = row.grade,
+            }
         end
-
-        local grade = job.grades[tostring(v.grade)]
-
-        if not grade then
-            print(('[rsg-multijob] WARNING: Missing grade %s for job "%s" | Citizen ID: %s'):format(v.grade, v.job, citizenid))
-            goto continue
-        end
-
-        storeJobs[#storeJobs + 1] = {
-            job = v.job,
-            salary = grade.payment,
-            jobLabel = job.label,
-            gradeLabel = grade.name,
-            grade = v.grade,
-        }
-
-        ::continue::
     end
-    return storeJobs
+
+    return list
 end
 
--- Pushes the current job list straight to the client, instead of the client
--- blind-waiting a fixed delay and re-fetching (avoids a race with the DB write).
-local function PushJobs(src, Player)
-    TriggerClientEvent('rsg-multijob:client:refreshJobs', src, BuildJobList(Player.PlayerData.citizenid), Player.PlayerData.job.name)
+-- Sends the current job list to an online player's open menu
+local function PushJobs(Player)
+    if not Player then return end
+    TriggerClientEvent('rsg-multijob:client:refreshJobs', Player.PlayerData.source, BuildJobList(Player.PlayerData.citizenid), Player.PlayerData.job.name)
 end
 
-RSGCore.Functions.CreateCallback('rsg-multijob:server:checkjobs', function(source, cb)
-    local Player = RSGCore.Functions.GetPlayer(source)
-    if not Player then return cb(false) end
+-- Offline player: if job is their saved active job, swap it to unemployed
+local function SetOfflineUnemployedIfActive(cid, job)
+    local raw = MySQL.scalar.await('SELECT job FROM players WHERE citizenid = ? LIMIT 1', { cid })
+    if not raw then return end
 
-    cb(GetJobCount(Player.PlayerData.citizenid) < Config.MaxJobs)
+    local ok, current = pcall(json.decode, raw)
+    if not ok or type(current) ~= 'table' or current.name ~= job then return end
+
+    local unemployed = RSGCore.Shared.Jobs['unemployed']
+    local grade = unemployed and unemployed.grades and unemployed.grades['0'] or {}
+
+    MySQL.update.await('UPDATE players SET job = ? WHERE citizenid = ?', { json.encode({
+        name = 'unemployed',
+        label = unemployed and unemployed.label or locale('unemployed_label'),
+        payment = grade.payment or 0,
+        type = unemployed and unemployed.type or nil,
+        onduty = false,
+        isboss = false,
+        grade = { name = grade.name or locale('unemployed_grade'), level = 0 },
+    }), cid })
+end
+
+-- Removes a stored job; drops the player to unemployed if it was active.
+-- Returns true if a row was removed.
+local function RemoveStoredJob(cid, Player, job)
+    local affected = MySQL.update.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
+    if not affected or affected < 1 then return false end
+
+    if Player then
+        if Player.PlayerData.job.name == job then
+            Player.Functions.SetJob('unemployed', 0)
+        end
+        PushJobs(Player)
+    else
+        SetOfflineUnemployedIfActive(cid, job)
+    end
+
+    return true
+end
+
+-- Resolves a server id (online) or citizenid (online/offline) to cid + Player.
+-- Unknown citizenids return nil so typos can't create orphan rows.
+local function ResolvePlayer(identifier)
+    if type(identifier) == 'number' then
+        local Player = RSGCore.Functions.GetPlayer(identifier)
+        if not Player then return nil, nil end
+        return Player.PlayerData.citizenid, Player
+    end
+
+    if type(identifier) ~= 'string' or identifier == '' then return nil, nil end
+
+    local Player = RSGCore.Functions.GetPlayerByCitizenId(identifier)
+    if Player then return Player.PlayerData.citizenid, Player end
+
+    if not MySQL.scalar.await('SELECT 1 FROM players WHERE citizenid = ? LIMIT 1', { identifier }) then
+        return nil, nil
+    end
+
+    return identifier, nil
+end
+
+-----------------------------------------------------------------------
+-- Commands
+-----------------------------------------------------------------------
+
+RSGCore.Commands.Add('myjobs', locale('cmd_myjobs_desc'), {}, false, function(source)
+    TriggerClientEvent('rsg-multijob:client:openmenu', source)
 end)
+
+RSGCore.Commands.Add('removejob', locale('cmd_removejob_desc'), {
+    { name = 'id', help = locale('cmd_removejob_id') },
+    { name = 'job', help = locale('cmd_removejob_job') },
+}, true, function(source, args)
+    local src = source
+    local job = args[2]
+    local cid, Player = ResolvePlayer(tonumber(args[1]) or args[1])
+
+    if not cid then
+        Notify(src, locale('title_error'), locale('player_not_found'), 'error')
+        return
+    end
+
+    if not RemoveStoredJob(cid, Player, job) then
+        Notify(src, locale('title_error'), locale('job_specified'), 'error')
+        return
+    end
+
+    Notify(src, locale('title_job_removed'), locale('job_removed_desc', JobLabel(job), args[1]), 'success')
+
+    local Admin = src > 0 and RSGCore.Functions.GetPlayer(src) or nil
+    Webhook.Send('JobRemovedByAdmin', {
+        description = locale('wh_admin_removed', JobLabel(job), Player and GetCharName(Player) or cid),
+        fields = {
+            { name = locale('wh_field_admin'), value = Admin and PlayerTag(Admin) or locale('wh_console'), inline = true },
+            { name = locale('wh_field_target'), value = PlayerTag(Player, cid), inline = true },
+            { name = locale('wh_field_job'), value = JobLabel(job), inline = true },
+        }
+    })
+end, 'admin')
+
+-----------------------------------------------------------------------
+-- Menu
+-----------------------------------------------------------------------
 
 lib.callback.register('rsg-multijob:server:myJobs', function(source)
     local Player = RSGCore.Functions.GetPlayer(source)
@@ -106,41 +231,37 @@ end)
 RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
     local src = source
     local Player = RSGCore.Functions.GetPlayer(src)
-    if not Player then return end
-
-    if type(job) ~= 'string' then return end
+    if not Player or type(job) ~= 'string' or IsThrottled(src) then return end
 
     local cid = Player.PlayerData.citizenid
     local now = GetGameTimer()
     local readyAt = switchCooldowns[cid]
 
     if readyAt and now < readyAt then
-        local secondsLeft = math.ceil((readyAt - now) / 1000)
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_cooldown'), locale('sv_cooldown_desc'):format(secondsLeft), "generic_textures", "tick", 5000)
+        Notify(src, locale('title_cooldown'), locale('cooldown_desc', math.ceil((readyAt - now) / 1000)), 'warning')
         return
     end
 
     if Player.PlayerData.job.name == job then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_current_job'), locale('sv_current_job_error'), "generic_textures", "tick", 5000)
+        Notify(src, locale('title_current_job'), locale('current_job_error'), 'inform')
         return
     end
 
     local jobInfo = RSGCore.Shared.Jobs[job]
     if not jobInfo then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_invalid_job'), locale('sv_invalid_job_desc'), "generic_textures", "tick", 5000)
+        Notify(src, locale('title_invalid_job'), locale('invalid_job_desc'), 'error')
         return
     end
 
-    local canSet, grade = CanSetJob(cid, job)
-
-    if not canSet then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_hold_job'), "generic_textures", "tick", 5000)
+    local grade = GetStoredGrade(cid, job)
+    if grade == nil then
+        Notify(src, locale('title_error'), locale('not_hold_job'), 'error')
         return
     end
 
     local gradeInfo = jobInfo.grades[tostring(grade)]
     if not gradeInfo then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_invalid_grade'), "generic_textures", "tick", 5000)
+        Notify(src, locale('title_error'), locale('invalid_grade'), 'error')
         return
     end
 
@@ -149,338 +270,231 @@ RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
     Player.Functions.SetJob(job, grade)
     Player.Functions.SetJobDuty(false)
     TriggerClientEvent('RSGCore:Client:SetDuty', src, false)
-    TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_job_changed'), locale('sv_job') .. ': ' .. jobInfo.label, "generic_textures", "tick", 5000)
+    Notify(src, locale('title_job_changed'), locale('job_changed_desc', jobInfo.label), 'success')
 
     Webhook.Send('JobSwitched', {
-        description = ('**%s** switched their active job to **%s**.'):format(GetCharName(Player), jobInfo.label),
+        description = locale('wh_switched', GetCharName(Player), jobInfo.label),
         fields = {
-            { name = 'Player', value = ('%s (`%s`)'):format(GetCharName(Player), cid), inline = true },
-            { name = 'Server ID', value = tostring(src), inline = true },
-            { name = 'New Job', value = ('%s — %s'):format(jobInfo.label, gradeInfo.name), inline = true },
+            { name = locale('wh_field_player'), value = PlayerTag(Player), inline = true },
+            { name = locale('wh_field_server_id'), value = tostring(src), inline = true },
+            { name = locale('wh_field_new_job'), value = ('%s — %s'):format(jobInfo.label, gradeInfo.name), inline = true },
         }
     })
 
-    PushJobs(src, Player)
-end)
-
-RegisterNetEvent('rsg-multijob:server:newJob', function(newJob)
-    local src = source
-    local Player = RSGCore.Functions.GetPlayer(src)
-    if not Player then return end
-
-    if not newJob or not newJob.name or newJob.name == 'unemployed' then return end
-    if not RSGCore.Shared.Jobs[newJob.name] then return end
-
-    local cid = Player.PlayerData.citizenid
-    local result = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, newJob.name })
-
-    if result[1] then
-        MySQL.query.await('UPDATE player_jobs SET grade = ? WHERE job = ? AND citizenid = ?', { newJob.grade.level, newJob.name, cid })
-        PushJobs(src, Player)
-        return
-    end
-
-    if GetJobCount(cid) >= Config.MaxJobs then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_max_jobs'), locale('sv_job_max'), "generic_textures", "tick", 5000)
-        return
-    end
-
-    MySQL.insert.await('INSERT INTO player_jobs (citizenid, job, grade) VALUES (?, ?, ?)', { cid, newJob.name, newJob.grade.level })
-
-    Webhook.Send('JobAdded', {
-        description = ('**%s** was granted the job **%s**.'):format(GetCharName(Player), RSGCore.Shared.Jobs[newJob.name].label),
-        fields = {
-            { name = 'Player', value = ('%s (`%s`)'):format(GetCharName(Player), cid), inline = true },
-            { name = 'Server ID', value = tostring(src), inline = true },
-            { name = 'Job', value = ('%s — %s'):format(RSGCore.Shared.Jobs[newJob.name].label, newJob.grade.name or tostring(newJob.grade.level)), inline = true },
-        }
-    })
-
-    PushJobs(src, Player)
+    PushJobs(Player)
 end)
 
 RegisterNetEvent('rsg-multijob:server:deleteJob', function(job)
     local src = source
     local Player = RSGCore.Functions.GetPlayer(src)
-    if not Player then return end
+    if not Player or type(job) ~= 'string' or IsThrottled(src) then return end
 
-    if type(job) ~= 'string' then return end
-
-    local canSet = CanSetJob(Player.PlayerData.citizenid, job)
-    if not canSet then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_hold_job'), "generic_textures", "tick", 5000)
+    local cid = Player.PlayerData.citizenid
+    if not RemoveStoredJob(cid, Player, job) then
+        Notify(src, locale('title_error'), locale('not_hold_job'), 'error')
         return
     end
 
-    MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { Player.PlayerData.citizenid, job })
-
-    local jobInfo = RSGCore.Shared.Jobs[job]
-    TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_job_deleted'), locale('sv_job_deleted') .. ' ' .. (jobInfo and jobInfo.label or job) .. ' ' .. locale('sv_job_deleted_2'), "generic_textures", "tick", 5000)
+    Notify(src, locale('title_job_deleted'), locale('job_deleted_desc', JobLabel(job)), 'success')
 
     Webhook.Send('JobDeleted', {
-        description = ('**%s** removed the job **%s** from their own menu.'):format(GetCharName(Player), jobInfo and jobInfo.label or job),
+        description = locale('wh_deleted', GetCharName(Player), JobLabel(job)),
         fields = {
-            { name = 'Player', value = ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid), inline = true },
-            { name = 'Server ID', value = tostring(src), inline = true },
-            { name = 'Job', value = jobInfo and jobInfo.label or job, inline = true },
+            { name = locale('wh_field_player'), value = PlayerTag(Player), inline = true },
+            { name = locale('wh_field_server_id'), value = tostring(src), inline = true },
+            { name = locale('wh_field_job'), value = JobLabel(job), inline = true },
         }
     })
-
-    if Player.PlayerData.job.name == job then
-        Player.Functions.SetJob('unemployed', 0)
-    end
-
-    PushJobs(src, Player)
 end)
 
--- NOTE: this listens for rsg-bossmenu's fire event so multijob stays in sync with it.
--- Only a caller who actually holds a boss-grade in the target's job may fire them.
-RegisterNetEvent('rsg-bossmenu:server:FireEmployee', function(target)
-    local src = source
+-----------------------------------------------------------------------
+-- Job capture
+-- Server-side only: the job is read from the player's own data, never
+-- from the client, so nobody can add themselves a job they weren't given.
+-----------------------------------------------------------------------
+
+AddEventHandler('RSGCore:Server:OnJobUpdate', function(src)
     local Player = RSGCore.Functions.GetPlayer(src)
     if not Player then return end
 
-    local Employee = RSGCore.Functions.GetPlayerByCitizenId(target)
-
-    if Employee then
-        local oldJob = Employee.PlayerData.job.name
-
-        if not IsBossOf(Player, oldJob) then return end
-        if Employee.PlayerData.job.grade.level > Player.PlayerData.job.grade.level then return end
-
-        MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { Employee.PlayerData.citizenid, oldJob })
-        Employee.Functions.SetJob('unemployed', 0)
-
-        local jobInfo = RSGCore.Shared.Jobs[oldJob]
-        Webhook.Send('EmployeeFired', {
-            description = ('**%s** fired **%s** from **%s**.'):format(GetCharName(Player), GetCharName(Employee), jobInfo and jobInfo.label or oldJob),
-            fields = {
-                { name = 'Fired By', value = ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid), inline = true },
-                { name = 'Employee', value = ('%s (`%s`)'):format(GetCharName(Employee), Employee.PlayerData.citizenid), inline = true },
-                { name = 'Job', value = jobInfo and jobInfo.label or oldJob, inline = true },
-            }
-        })
-
-        PushJobs(Employee.PlayerData.source, Employee)
-    else
-        local player = MySQL.query.await('SELECT * FROM players WHERE citizenid = ? LIMIT 1', { target })
-        if not player[1] then return end
-
-        local offlineJob = json.decode(player[1].job)
-
-        if not IsBossOf(Player, offlineJob.name) then return end
-        if offlineJob.grade.level > Player.PlayerData.job.grade.level then return end
-
-        MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { target, offlineJob.name })
-
-        local jobInfo = RSGCore.Shared.Jobs[offlineJob.name]
-        local offlineCharName = (player[1].charinfo and json.decode(player[1].charinfo)) or nil
-        Webhook.Send('EmployeeFired', {
-            description = ('**%s** fired an offline employee from **%s**.'):format(GetCharName(Player), jobInfo and jobInfo.label or offlineJob.name),
-            fields = {
-                { name = 'Fired By', value = ('%s (`%s`)'):format(GetCharName(Player), Player.PlayerData.citizenid), inline = true },
-                { name = 'Employee', value = ('`%s`%s'):format(target, offlineCharName and (' (' .. (offlineCharName.firstname or '') .. ' ' .. (offlineCharName.lastname or '') .. ')') or ''), inline = true },
-                { name = 'Job', value = jobInfo and jobInfo.label or offlineJob.name, inline = true },
-            }
-        })
-    end
-end)
-
-local function adminRemoveJob(src, id, job)
-    local Player = RSGCore.Functions.GetPlayer(id)
-    if not Player then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_online'), "generic_textures", "tick", 5000)
-        return
-    end
+    local job = Player.PlayerData.job
+    if not job or not IsValidJobName(job.name) then return end
 
     local cid = Player.PlayerData.citizenid
-    local result = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
+    local level = tonumber(job.grade and job.grade.level) or 0
+    local stored = GetStoredGrade(cid, job.name)
 
-    if not result[1] then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_job_specified'), "generic_textures", "tick", 5000)
+    if stored == level then return end -- nothing changed (duty toggle, switch, etc.)
+
+    if stored ~= nil then
+        MySQL.update.await('UPDATE player_jobs SET grade = ? WHERE citizenid = ? AND job = ?', { level, cid, job.name })
+        PushJobs(Player)
         return
     end
 
-    MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
-    TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_job_removed'), locale('sv_job_removed_desc'):format(job, id), "generic_textures", "tick", 5000)
+    if GetJobCount(cid) >= Config.MaxJobs then
+        Notify(src, locale('title_max_jobs'), locale('job_max'), 'error')
+        return
+    end
 
-    local AdminPlayer = RSGCore.Functions.GetPlayer(src)
-    local jobInfo = RSGCore.Shared.Jobs[job]
-    Webhook.Send('JobRemovedByAdmin', {
-        description = ('An admin removed the job **%s** from **%s**.'):format(jobInfo and jobInfo.label or job, GetCharName(Player)),
+    MySQL.insert.await('INSERT INTO player_jobs (citizenid, job, grade) VALUES (?, ?, ?)', { cid, job.name, level })
+
+    Webhook.Send('JobAdded', {
+        description = locale('wh_granted', GetCharName(Player), JobLabel(job.name)),
         fields = {
-            { name = 'Admin', value = AdminPlayer and ('%s (`%s`)'):format(GetCharName(AdminPlayer), AdminPlayer.PlayerData.citizenid) or ('Server ID `%s`'):format(tostring(src)), inline = true },
-            { name = 'Target Player', value = ('%s (`%s`) — ID %s'):format(GetCharName(Player), cid, tostring(id)), inline = true },
-            { name = 'Job', value = jobInfo and jobInfo.label or job, inline = true },
+            { name = locale('wh_field_player'), value = PlayerTag(Player), inline = true },
+            { name = locale('wh_field_server_id'), value = tostring(src), inline = true },
+            { name = locale('wh_field_job'), value = ('%s — %s'):format(JobLabel(job.name), job.grade and job.grade.name or tostring(level)), inline = true },
         }
     })
 
-    if Player.PlayerData.job.name == job then
-        Player.Functions.SetJob('unemployed', 0)
-    end
-
-    PushJobs(id, Player)
-end
-
-RSGCore.Commands.Add('removejob', locale('sv_command_remove'), { { name = 'id', help = locale('sv_command_r_id') }, { name = 'job', help = locale('sv_command_r_name') } }, true, function(source, args)
-    local src = source
-
-    if not args[1] then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_provide'), "generic_textures", "tick", 5000)
-        return
-    end
-
-    if not args[2] then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_provide_name'), "generic_textures", "tick", 5000)
-        return
-    end
-
-    local id = tonumber(args[1])
-    if not id then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_invalid_id'), "generic_textures", "tick", 5000)
-        return
-    end
-
-    local Player = RSGCore.Functions.GetPlayer(id)
-
-    if not Player then
-        TriggerClientEvent('rNotify:NotifyLeft', src, locale('sv_title_error'), locale('sv_not_online'), "generic_textures", "tick", 5000)
-        return
-    end
-
-    adminRemoveJob(src, id, args[2])
-end, 'admin')
-
-AddEventHandler('playerDropped', function()
-    local Player = RSGCore.Functions.GetPlayer(source)
-    if Player then switchCooldowns[Player.PlayerData.citizenid] = nil end
+    PushJobs(Player)
 end)
 
 -----------------------------------------------------------------------
--- Exports: AddJob / RemoveJob / GetJobs
--- For use by external resources (e.g. shops, quests, admin tools) that
--- need to grant or revoke a multijob without going through the menu.
+-- rsg-bossmenu sync: only a boss of the target's job who outranks (or
+-- equals) the target can remove it from their multijob list.
 -----------------------------------------------------------------------
 
--- Resolves `identifier` (a server id for an online player, or a citizenid
--- string for either an online or offline player) to a citizenid + the
--- online Player object if one exists.
-local function ResolvePlayer(identifier)
-    local Player = nil
+RegisterNetEvent('rsg-bossmenu:server:FireEmployee', function(target)
+    local src = source
+    local Boss = RSGCore.Functions.GetPlayer(src)
+    if not Boss or type(target) ~= 'string' then return end
 
-    if type(identifier) == 'number' then
-        Player = RSGCore.Functions.GetPlayer(identifier)
-    elseif type(identifier) == 'string' then
-        Player = RSGCore.Functions.GetPlayerByCitizenId(identifier)
-    end
+    local bossJob = Boss.PlayerData.job.name
+    if not IsBossOf(Boss, bossJob) then return end
 
-    local cid = Player and Player.PlayerData.citizenid or (type(identifier) == 'string' and identifier or nil)
-    return cid, Player
+    if target == Boss.PlayerData.citizenid then return end
+
+    local Employee = RSGCore.Functions.GetPlayerByCitizenId(target)
+    local targetLevel = GetStoredGrade(target, bossJob)
+
+    if targetLevel == nil or targetLevel > Boss.PlayerData.job.grade.level then return end
+    if not RemoveStoredJob(target, Employee, bossJob) then return end
+
+    Webhook.Send('EmployeeFired', {
+        description = locale('wh_fired', GetCharName(Boss), Employee and GetCharName(Employee) or target, JobLabel(bossJob)),
+        fields = {
+            { name = locale('wh_field_fired_by'), value = PlayerTag(Boss), inline = true },
+            { name = locale('wh_field_employee'), value = PlayerTag(Employee, target), inline = true },
+            { name = locale('wh_field_job'), value = JobLabel(bossJob), inline = true },
+        }
+    })
+end)
+
+-----------------------------------------------------------------------
+-- Cleanup
+-----------------------------------------------------------------------
+
+AddEventHandler('playerDropped', function()
+    actionThrottle[source] = nil
+end)
+
+-----------------------------------------------------------------------
+-- Exports
+-- identifier: server id (online) or citizenid (online or offline)
+-----------------------------------------------------------------------
+
+--- @return boolean canTake, string|nil reason 'invalid_job'|'player_not_found'|'already_held'|'max_jobs'
+local function CanTakeJob(identifier, job, bypassMax)
+    if not IsValidJobName(job) then return false, 'invalid_job' end
+
+    local cid = ResolvePlayer(identifier)
+    if not cid then return false, 'player_not_found' end
+
+    if GetStoredGrade(cid, job) ~= nil then return false, 'already_held' end
+    if not bypassMax and GetJobCount(cid) >= Config.MaxJobs then return false, 'max_jobs' end
+
+    return true, nil
 end
 
---- Grants (or upgrades) a job on a player's stored multijob list.
---- @param identifier number|string  server id of an online player, or a citizenid (online or offline)
---- @param job string  job name, must exist in RSGCore.Shared.Jobs
---- @param grade number|nil  grade level, defaults to 0
---- @param bypassMax boolean|nil  if true, skips the Config.MaxJobs limit
---- @return boolean success
---- @return string|nil errorReason  'invalid_job' | 'invalid_grade' | 'player_not_found' | 'max_jobs'
-local function AddJob(identifier, job, grade, bypassMax)
-    grade = tonumber(grade) or 0
+--- @return boolean held, number|nil grade
+local function HasJob(identifier, job)
+    if type(job) ~= 'string' then return false, nil end
 
-    if type(job) ~= 'string' or not RSGCore.Shared.Jobs[job] then
-        return false, 'invalid_job'
-    end
+    local cid = ResolvePlayer(identifier)
+    if not cid then return false, nil end
+
+    local grade = GetStoredGrade(cid, job)
+    return grade ~= nil, grade
+end
+
+--- @return number count, number max
+local function ExportGetJobCount(identifier)
+    local cid = ResolvePlayer(identifier)
+    return cid and GetJobCount(cid) or 0, Config.MaxJobs
+end
+
+--- @return boolean success, string|nil reason 'invalid_job'|'invalid_grade'|'player_not_found'|'max_jobs'
+local function AddJob(identifier, job, grade, bypassMax)
+    grade = math.floor(tonumber(grade) or 0)
+
+    if not IsValidJobName(job) then return false, 'invalid_job' end
 
     local jobInfo = RSGCore.Shared.Jobs[job]
     local gradeInfo = jobInfo.grades[tostring(grade)]
-    if not gradeInfo then
-        return false, 'invalid_grade'
-    end
+    if not gradeInfo then return false, 'invalid_grade' end
 
     local cid, Player = ResolvePlayer(identifier)
-    if not cid then
-        return false, 'player_not_found'
-    end
+    if not cid then return false, 'player_not_found' end
 
-    local existing = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
+    local stored = GetStoredGrade(cid, job)
 
-    if existing[1] then
-        MySQL.query.await('UPDATE player_jobs SET grade = ? WHERE citizenid = ? AND job = ?', { grade, cid, job })
-    else
-        if not bypassMax and GetJobCount(cid) >= Config.MaxJobs then
-            return false, 'max_jobs'
+    if stored == grade then return true, nil end
+
+    if stored ~= nil then
+        MySQL.update.await('UPDATE player_jobs SET grade = ? WHERE citizenid = ? AND job = ?', { grade, cid, job })
+        if Player and Player.PlayerData.job.name == job then
+            Player.Functions.SetJob(job, grade)
         end
-
+    else
+        if not bypassMax and GetJobCount(cid) >= Config.MaxJobs then return false, 'max_jobs' end
         MySQL.insert.await('INSERT INTO player_jobs (citizenid, job, grade) VALUES (?, ?, ?)', { cid, job, grade })
     end
 
     Webhook.Send('JobAdded', {
-        description = ('**%s** was granted the job **%s** via export.'):format(Player and GetCharName(Player) or ('`%s`'):format(cid), jobInfo.label),
+        description = locale(stored ~= nil and 'wh_export_regraded' or 'wh_export_granted', Player and GetCharName(Player) or cid, jobInfo.label),
         fields = {
-            { name = 'Player', value = ('`%s`'):format(cid), inline = true },
-            { name = 'Job', value = ('%s — %s'):format(jobInfo.label, gradeInfo.name), inline = true },
+            { name = locale('wh_field_player'), value = PlayerTag(Player, cid), inline = true },
+            { name = locale('wh_field_job'), value = ('%s — %s'):format(jobInfo.label, gradeInfo.name), inline = true },
+            { name = locale('wh_field_invoked_by'), value = GetInvokingResource() or locale('wh_unknown'), inline = true },
         }
     })
 
-    if Player then PushJobs(Player.PlayerData.source, Player) end
-
+    PushJobs(Player)
     return true, nil
 end
 
---- Removes a job from a player's stored multijob list. If it's the
---- player's currently active job and they're online, they're set to
---- unemployed.
---- @param identifier number|string  server id of an online player, or a citizenid (online or offline)
---- @param job string  job name to remove
---- @return boolean success
---- @return string|nil errorReason  'invalid_job' | 'player_not_found' | 'job_not_held'
+--- @return boolean success, string|nil reason 'invalid_job'|'player_not_found'|'job_not_held'
 local function RemoveJob(identifier, job)
-    if type(job) ~= 'string' then
-        return false, 'invalid_job'
-    end
+    if type(job) ~= 'string' or job == '' then return false, 'invalid_job' end
 
     local cid, Player = ResolvePlayer(identifier)
-    if not cid then
-        return false, 'player_not_found'
-    end
+    if not cid then return false, 'player_not_found' end
 
-    local existing = MySQL.query.await('SELECT * FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
-    if not existing[1] then
-        return false, 'job_not_held'
-    end
+    if not RemoveStoredJob(cid, Player, job) then return false, 'job_not_held' end
 
-    MySQL.query.await('DELETE FROM player_jobs WHERE citizenid = ? AND job = ?', { cid, job })
-
-    local jobInfo = RSGCore.Shared.Jobs[job]
     Webhook.Send('JobRemovedByAdmin', {
-        description = ('The job **%s** was removed from **%s** via export.'):format(jobInfo and jobInfo.label or job, Player and GetCharName(Player) or ('`%s`'):format(cid)),
+        description = locale('wh_export_removed', JobLabel(job), Player and GetCharName(Player) or cid),
         fields = {
-            { name = 'Player', value = ('`%s`'):format(cid), inline = true },
-            { name = 'Job', value = jobInfo and jobInfo.label or job, inline = true },
+            { name = locale('wh_field_player'), value = PlayerTag(Player, cid), inline = true },
+            { name = locale('wh_field_job'), value = JobLabel(job), inline = true },
+            { name = locale('wh_field_invoked_by'), value = GetInvokingResource() or locale('wh_unknown'), inline = true },
         }
     })
-
-    if Player then
-        if Player.PlayerData.job.name == job then
-            Player.Functions.SetJob('unemployed', 0)
-        end
-        PushJobs(Player.PlayerData.source, Player)
-    end
 
     return true, nil
 end
 
---- Returns a player's stored multijob list (same shape as the menu uses).
---- @param identifier number|string  server id of an online player, or a citizenid (online or offline)
---- @return table jobs  array of { job, salary, jobLabel, gradeLabel, grade }
+--- @return table jobs array of { job, salary, jobLabel, gradeLabel, grade }
 local function GetJobs(identifier)
     local cid = ResolvePlayer(identifier)
-    if not cid then return {} end
-
-    return BuildJobList(cid)
+    return cid and BuildJobList(cid) or {}
 end
 
 exports('AddJob', AddJob)
 exports('RemoveJob', RemoveJob)
 exports('GetJobs', GetJobs)
+exports('HasJob', HasJob)
+exports('CanTakeJob', CanTakeJob)
+exports('GetJobCount', ExportGetJobCount)

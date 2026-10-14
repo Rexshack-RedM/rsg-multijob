@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Wild West Jobs</title>
+    <title></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -12,18 +12,16 @@
 </head>
 <body>
     <div id="app" class="hidden">
-        <div id="vignette"></div>
-
         <div class="stage">
             <!-- ============ MAIN PANEL ============ -->
             <div class="panel" id="mainContainer">
                 <div class="panel-head" id="dragHandle">
                     <div class="seal-badge"><i class="fa-solid fa-briefcase"></i></div>
                     <div class="panel-titles">
-                        <h1 class="panel-title" id="panelTitle">My Jobs</h1>
-                        <div class="panel-subtitle" id="panelSubtitle">Employment Registry</div>
+                        <h1 class="panel-title" id="panelTitle"></h1>
+                        <div class="panel-subtitle" id="panelSubtitle"></div>
                     </div>
-                    <button class="circle-btn" id="closeBtn" title="Close">
+                    <button class="circle-btn" id="closeBtn">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -37,8 +35,8 @@
                             <i class="fa-solid fa-toggle-off"></i>
                         </div>
                         <div class="row-main">
-                            <span class="row-title" id="dutyLabel">Duty Status</span>
-                            <span class="row-desc duty-status" id="dutyStatus">Off Duty</span>
+                            <span class="row-title" id="dutyLabel"></span>
+                            <span class="row-desc duty-status" id="dutyStatus"></span>
                         </div>
                         <div class="duty-indicator" id="dutyIndicator"></div>
                     </div>
@@ -52,7 +50,7 @@
                 <!-- Capacity / stat bar -->
                 <div class="capacity-wrap">
                     <div class="capacity-label">
-                        <span id="capacityLabel">Registry Capacity</span>
+                        <span id="capacityLabel"></span>
                         <span><span id="jobCount">0</span> / <span id="maxJobs">6</span></span>
                     </div>
                     <div class="stat-track">
@@ -61,28 +59,28 @@
                 </div>
 
                 <div class="panel-footer">
-                    <span id="maxJobsFooterLabel">Max Jobs:</span> <span id="maxJobsFooter">6</span>
+                    <span id="maxJobsFooterLabel"></span> <span id="maxJobsFooter">6</span>
                 </div>
             </div>
 
             <!-- ============ CHOICE PANEL ============ -->
             <div class="panel choice-panel hidden" id="choiceContainer">
                 <div class="panel-head" id="choiceDragHandle">
-                    <button class="circle-btn" id="backBtn" title="Back">
+                    <button class="circle-btn" id="backBtn">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
                     <div class="panel-titles">
-                        <h2 class="panel-title panel-title-sm" id="choiceTitle">Job Actions</h2>
-                        <div class="panel-subtitle" id="choiceSubtitle">Select an action</div>
+                        <h2 class="panel-title panel-title-sm" id="choiceTitle"></h2>
+                        <div class="panel-subtitle" id="choiceSubtitle"></div>
                     </div>
-                    <button class="circle-btn" id="choiceCloseBtn" title="Close">
+                    <button class="circle-btn" id="choiceCloseBtn">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
 
                 <div class="section-divider"><span>&#9670;</span></div>
 
-                <div class="choice-job-name" id="choiceJobName">Job Name</div>
+                <div class="choice-job-name" id="choiceJobName"></div>
 
                 <div class="choice-actions">
                     <button class="row-card action-btn" id="switchJobBtn">
@@ -90,8 +88,8 @@
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                         <div class="row-main">
-                            <span class="row-title" id="switchJobTitle">Switch Job</span>
-                            <span class="row-desc"><i id="switchJobDesc">Make this your active job</i></span>
+                            <span class="row-title" id="switchJobTitle"></span>
+                            <span class="row-desc"><i id="switchJobDesc"></i></span>
                         </div>
                         <div class="row-arrow">
                             <i class="fa-solid fa-chevron-right"></i>
@@ -103,8 +101,8 @@
                             <i class="fa-solid fa-trash-can"></i>
                         </div>
                         <div class="row-main">
-                            <span class="row-title" id="deleteJobTitle">Delete Job</span>
-                            <span class="row-desc"><i id="deleteJobDesc">Remove from your jobs</i></span>
+                            <span class="row-title" id="deleteJobTitle"></span>
+                            <span class="row-desc"><i id="deleteJobDesc"></i></span>
                         </div>
                         <div class="row-arrow">
                             <i class="fa-solid fa-chevron-right"></i>
@@ -120,22 +118,19 @@
                 <div class="icon-badge modal-icon">
                     <i class="fa-solid fa-exclamation"></i>
                 </div>
-                <h3 class="modal-title" id="confirmTitle">Are you sure?</h3>
+                <h3 class="modal-title" id="confirmTitle"></h3>
                 <div class="ink-divider"></div>
-                <p class="modal-text" id="confirmText">This action cannot be undone.</p>
+                <p class="modal-text" id="confirmText"></p>
                 <div class="modal-actions">
                     <button class="wood-btn" id="confirmYes">
-                        <i class="fa-solid fa-check"></i> <span id="confirmYesLabel">Confirm</span>
+                        <i class="fa-solid fa-check"></i> <span id="confirmYesLabel"></span>
                     </button>
                     <button class="wood-btn wood-btn-muted" id="confirmNo">
-                        <i class="fa-solid fa-xmark"></i> <span id="confirmNoLabel">Cancel</span>
+                        <i class="fa-solid fa-xmark"></i> <span id="confirmNoLabel"></span>
                     </button>
                 </div>
             </div>
         </div>
-
-        <!-- ============ TOASTS ============ -->
-        <div id="toasts"></div>
     </div>
 
     <script src="script.js"></script>

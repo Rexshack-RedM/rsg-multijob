@@ -3,7 +3,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 game 'rdr3'
 
 description 'rsg-multijob'
-version '2.0.8'
+version '3.0.0'
 
 shared_scripts { 
     '@ox_lib/init.lua',
@@ -34,6 +34,9 @@ server_exports {
     'AddJob',
     'RemoveJob',
     'GetJobs',
+    'HasJob',
+    'CanTakeJob',
+    'GetJobCount',
 }
 
 lua54 'yes'

@@ -2,127 +2,110 @@ local Config = lib.require('config')
 lib.locale()
 
 local isUIOpen = false
+local uiLocales -- built once, locales don't change at runtime
 
 local function withIcons(jobs)
-    if jobs then
-        for _, job in ipairs(jobs) do
-            job.icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase'
-        end
+    jobs = jobs or {}
+    for _, job in ipairs(jobs) do
+        job.icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase'
     end
-    return jobs or {}
+    return jobs
 end
 
--- Builds the localized UI text table sent to the NUI
+-- Every ui_* key in locales/<lang>.json is sent to the NUI, so new UI text
+-- only needs adding to the locale files.
+local UI_KEYS = {
+    'ui_page_title', 'ui_my_jobs', 'ui_subtitle', 'ui_close', 'ui_back', 'ui_drag_hint',
+    'ui_duty_label', 'ui_on_duty', 'ui_off_duty', 'ui_capacity_label', 'ui_max_jobs_footer',
+    'ui_job_actions', 'ui_select_action', 'ui_switch_job', 'ui_switch_desc', 'ui_delete_job',
+    'ui_delete_desc', 'ui_confirm_title', 'ui_confirm_text', 'ui_confirm', 'ui_cancel',
+    'ui_no_jobs_title', 'ui_no_jobs_sub', 'ui_current_pill', 'ui_grade', 'ui_salary',
+    'ui_switch_confirm_title', 'ui_switch_confirm_text', 'ui_delete_confirm_title', 'ui_delete_confirm_text',
+}
+
 local function getUILocales()
-    return {
-        pageTitle = locale('cl_ui_page_title'),
-        myJobs = locale('cl_lang_3'),
-        subtitle = locale('cl_ui_subtitle'),
-        close = locale('cl_ui_close'),
-        back = locale('cl_ui_back'),
-        dutyLabel = locale('cl_lang_4'),
-        dutyOn = locale('cl_lang_1'),
-        dutyOff = locale('cl_lang_2'),
-        capacityLabel = locale('cl_ui_capacity_label'),
-        maxJobsFooter = locale('cl_ui_max_jobs_footer'),
-        jobActions = locale('cl_job_actions'),
-        selectAction = locale('cl_ui_select_action'),
-        switchJob = locale('cl_switch_job'),
-        switchDesc = locale('cl_switch_your_job'),
-        deleteJob = locale('cl_delete_job'),
-        deleteDesc = locale('cl_delete_selected_job'),
-        confirmTitle = locale('cl_ui_confirm_title'),
-        confirmText = locale('cl_ui_confirm_text'),
-        confirm = locale('cl_ui_confirm'),
-        cancel = locale('cl_ui_cancel'),
-        noJobsTitle = locale('cl_ui_no_jobs_title'),
-        noJobsSub = locale('cl_ui_no_jobs_sub'),
-        currentPill = locale('cl_ui_current_pill'),
-        grade = locale('cl_lang_grade'),
-        salary = locale('cl_lang_salary'),
-        switchConfirmTitle = locale('cl_ui_switch_confirm_title'),
-        switchConfirmText = locale('cl_ui_switch_confirm_text'),
-        deleteConfirmTitle = locale('cl_ui_delete_confirm_title'),
-        deleteConfirmText = locale('cl_ui_delete_confirm_text'),
-        notice = locale('cl_ui_notice'),
-    }
+    if uiLocales then return uiLocales end
+
+    uiLocales = {}
+    for _, key in ipairs(UI_KEYS) do
+        uiLocales[key] = locale(key)
+    end
+    return uiLocales
 end
 
--- Open the multijob UI
-local function showMultijob()
+local function closeUI()
+    isUIOpen = false
+    SetNuiFocus(false, false)
+end
+
+local function openUI()
+    if isUIOpen then return end
+
     local PlayerData = RSGCore.Functions.GetPlayerData()
-    local myJobs = withIcons(lib.callback.await('rsg-multijob:server:myJobs', false))
+    if not PlayerData or not PlayerData.job then return end
+
+    isUIOpen = true
+    local jobs = withIcons(lib.callback.await('rsg-multijob:server:myJobs', false))
+    if not isUIOpen then return end -- closed while waiting
 
     SetNuiFocus(true, true)
-    isUIOpen = true
-
     SendNUIMessage({
         action = 'open',
-        jobs = myJobs,
+        jobs = jobs,
         currentJob = PlayerData.job.name,
         onDuty = PlayerData.job.onduty,
         maxJobs = Config.MaxJobs,
-        locales = getUILocales()
+        locales = getUILocales(),
     })
 end
 
--- Close UI callback
-RegisterNUICallback('closeUI', function(data, cb)
-    SetNuiFocus(false, false)
-    isUIOpen = false
+RegisterNUICallback('closeUI', function(_, cb)
+    closeUI()
     cb('ok')
 end)
 
--- Toggle duty callback
-RegisterNUICallback('toggleDuty', function(data, cb)
+RegisterNUICallback('toggleDuty', function(_, cb)
     TriggerServerEvent('RSGCore:ToggleDuty')
     cb('ok')
 end)
 
--- Switch job callback
 RegisterNUICallback('switchJob', function(data, cb)
-    TriggerServerEvent('rsg-multijob:server:changeJob', data.job)
+    if type(data) == 'table' and type(data.job) == 'string' then
+        TriggerServerEvent('rsg-multijob:server:changeJob', data.job)
+    end
     cb('ok')
 end)
 
--- Delete job callback
 RegisterNUICallback('deleteJob', function(data, cb)
-    TriggerServerEvent('rsg-multijob:server:deleteJob', data.job)
+    if type(data) == 'table' and type(data.job) == 'string' then
+        TriggerServerEvent('rsg-multijob:server:deleteJob', data.job)
+    end
     cb('ok')
 end)
 
--- Event to open menu
-RegisterNetEvent('rsg-multijob:client:openmenu', function()
-    showMultijob()
-end)
+RegisterNetEvent('rsg-multijob:client:openmenu', openUI)
 
--- Server pushes the up-to-date job list after any change (switch/add/delete/fire),
--- instead of the client guessing a delay and re-fetching.
-RegisterNetEvent('rsg-multijob:client:refreshJobs', function(myJobs, currentJobName)
+-- Server pushes the up-to-date list after any change (switch/add/delete/fire)
+RegisterNetEvent('rsg-multijob:client:refreshJobs', function(jobs, currentJobName)
     if not isUIOpen then return end
 
     SendNUIMessage({
         action = 'refreshJobs',
-        jobs = withIcons(myJobs),
-        currentJob = currentJobName
+        jobs = withIcons(jobs),
+        currentJob = currentJobName,
     })
 end)
 
--- Update job event
-RegisterNetEvent('RSGCore:Client:OnJobUpdate', function(JobInfo)
-    TriggerServerEvent('rsg-multijob:server:newJob', JobInfo)
+-- Keep the duty indicator live while the menu is open.
+-- (Job capture is handled server-side via RSGCore:Server:OnJobUpdate.)
+RegisterNetEvent('RSGCore:Client:OnJobUpdate', function(job)
+    if not isUIOpen or not job then return end
 
-    if isUIOpen then
-        SendNUIMessage({
-            action = 'updateDuty',
-            onDuty = JobInfo.onduty
-        })
-    end
+    SendNUIMessage({ action = 'updateDuty', onDuty = job.onduty })
 end)
 
--- Close UI on resource stop
 AddEventHandler('onResourceStop', function(resourceName)
-    if GetCurrentResourceName() == resourceName then
-        SetNuiFocus(false, false)
+    if resourceName == GetCurrentResourceName() and isUIOpen then
+        closeUI()
     end
 end)
