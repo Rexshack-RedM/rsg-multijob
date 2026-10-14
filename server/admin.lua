@@ -3,7 +3,7 @@
 -- Every callback re-checks permission server-side; the NUI is never trusted.
 -----------------------------------------------------------------------
 
-local Config = lib.require('config')
+local Config = lib.require('shared.config')
 lib.locale()
 
 local lastAction = {}

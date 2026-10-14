@@ -6,7 +6,7 @@
 -- queuing, rate limits, or missing/blank URLs.
 -----------------------------------------------------------------------
 
-local Config = lib.require('config')
+local Config = lib.require('shared.config')
 
 Webhook = {}
 

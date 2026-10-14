@@ -9,7 +9,7 @@
 -- Exposes a global `JobRegistry` for the rest of this resource.
 -----------------------------------------------------------------------
 
-local Config = lib.require('config')
+local Config = lib.require('shared.config')
 
 JobRegistry = {}
 

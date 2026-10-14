@@ -1,4 +1,4 @@
-local Config = lib.require('config')
+local Config = lib.require('shared.config')
 lib.locale()
 
 -----------------------------------------------------------------------
