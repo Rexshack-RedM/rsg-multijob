@@ -2,7 +2,7 @@
 
 A multi-job system for **RSG-Core** (RedM). Lets players hold and switch between several jobs at once, gives admins a command to strip a job from a player, keeps `rsg-bossmenu` firings in sync, and logs everything to Discord via webhooks.
 
-Version: `2.2.0`
+Version: `3.1.0`
 
 ## Features
 
@@ -18,6 +18,29 @@ Version: `2.2.0`
 - **ox_lib notifications** — all player messages use `ox_lib` notify.
 - **Multi-language support** — UI and server messages are localized via `ox_lib` locales; English, German, Greek, Spanish, French, Japanese, Dutch, Polish, Brazilian Portuguese, Romanian and Italian are included.
 - **Version checker** — checks a GitHub-hosted `version.txt` on resource start and warns in the console if the server is running an outdated (or newer/dev) build.
+
+## Job Definitions & Admin Panel (v3.1.0)
+
+rsg-multijob now **owns every job on the server**. Job definitions live in the `multijob_jobs` database table instead of `rsg-core/shared/jobs.lua`, and are registered with rsg-core at runtime through its `AddJob` / `UpdateJob` / `RemoveJob` exports, which also sync `RSGCore.Shared.Jobs` to every client.
+
+- **First start:** if `multijob_jobs` is empty, every job rsg-core currently has (your existing `jobs.lua`) is imported, with `shared/default_jobs.lua` filling any gaps. After that the database is the source of truth.
+- **`/jobadmin`** (permission set by `Config.Admin.Permission`, default `admin`) opens the admin panel, where you can:
+  - create jobs (ID, label, type, Font Awesome icon, on-duty-at-login, off-duty pay)
+  - add, rename or re-pay grades, and toggle boss grades
+  - edit existing jobs. Online holders are refreshed straight away (duty state is kept), and anyone above a removed grade drops to the highest remaining one
+  - delete jobs. They are removed from every player's multijob list, and anyone using one (online or offline) becomes unemployed. `unemployed` can't be deleted
+  - **Import from Core**: pull in any job another resource registered that isn't managed yet
+- Every server callback re-checks admin permission and validates the data, so the NUI is never trusted.
+- New webhook events: `JobCreated`, `JobUpdated`, `JobDefinitionDeleted`.
+- New exports: `GetJobDefinition(name)` and `GetJobDefinitions()`.
+
+### Migrating from rsg-core jobs.lua
+
+1. Run `install.sql` (the table is also created automatically).
+2. In `server.cfg`, start `rsg-multijob` **directly after `rsg-core`** and before your other `rsg-*` job resources.
+3. Start the server once so your jobs are imported. You can then trim `rsg-core/shared/jobs.lua` down to just `RSGShared.ForceJobDefaultDutyAtLogin` and the `unemployed` job. Keep those: the duty flag is read by rsg-core itself, and `unemployed` is rsg-core's fallback.
+
+> **Note:** some resources copy `RSGCore.Shared.Jobs` once when they start. A brand-new job created in `/jobadmin` is live in rsg-core and on clients straight away, but such a resource (e.g. a boss menu that reads grade lists) only sees it after that resource is restarted.
 
 ## Requirements
 

@@ -32,12 +32,12 @@ local function IsThrottled(src)
 end
 
 local function JobLabel(job)
-    local info = RSGCore.Shared.Jobs[job]
+    local info = JobRegistry.Get(job)
     return info and info.label or job
 end
 
 local function IsValidJobName(job)
-    return type(job) == 'string' and job ~= 'unemployed' and RSGCore.Shared.Jobs[job] ~= nil
+    return type(job) == 'string' and job ~= 'unemployed' and JobRegistry.Get(job) ~= nil
 end
 
 -- Best-effort display name for webhook logs
@@ -63,7 +63,7 @@ end
 local function IsBossOf(Player, jobName)
     if not Player or Player.PlayerData.job.name ~= jobName then return false end
 
-    local job = RSGCore.Shared.Jobs[jobName]
+    local job = JobRegistry.Get(jobName)
     if not job then return false end
 
     local grade = job.grades[tostring(Player.PlayerData.job.grade.level)]
@@ -90,7 +90,7 @@ local function BuildJobList(cid)
     local rows = MySQL.query.await('SELECT job, grade FROM player_jobs WHERE citizenid = ?', { cid }) or {}
 
     for _, row in ipairs(rows) do
-        local job = RSGCore.Shared.Jobs[row.job]
+        local job = JobRegistry.Get(row.job)
         local grade = job and job.grades[tostring(row.grade)]
 
         if not job then
@@ -104,6 +104,7 @@ local function BuildJobList(cid)
                 jobLabel = job.label,
                 gradeLabel = grade.name,
                 grade = row.grade,
+                icon = job.icon,
             }
         end
     end
@@ -125,7 +126,7 @@ local function SetOfflineUnemployedIfActive(cid, job)
     local ok, current = pcall(json.decode, raw)
     if not ok or type(current) ~= 'table' or current.name ~= job then return end
 
-    local unemployed = RSGCore.Shared.Jobs['unemployed']
+    local unemployed = JobRegistry.Get('unemployed')
     local grade = unemployed and unemployed.grades and unemployed.grades['0'] or {}
 
     MySQL.update.await('UPDATE players SET job = ? WHERE citizenid = ?', { json.encode({
@@ -247,7 +248,7 @@ RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
         return
     end
 
-    local jobInfo = RSGCore.Shared.Jobs[job]
+    local jobInfo = JobRegistry.Get(job)
     if not jobInfo then
         Notify(src, locale('title_invalid_job'), locale('invalid_job_desc'), 'error')
         return
@@ -431,7 +432,7 @@ local function AddJob(identifier, job, grade, bypassMax)
 
     if not IsValidJobName(job) then return false, 'invalid_job' end
 
-    local jobInfo = RSGCore.Shared.Jobs[job]
+    local jobInfo = JobRegistry.Get(job)
     local gradeInfo = jobInfo.grades[tostring(grade)]
     if not gradeInfo then return false, 'invalid_grade' end
 
@@ -498,3 +499,9 @@ exports('GetJobs', GetJobs)
 exports('HasJob', HasJob)
 exports('CanTakeJob', CanTakeJob)
 exports('GetJobCount', ExportGetJobCount)
+
+-- Job definitions (now owned by rsg-multijob)
+--- @return table|nil job definition in rsg-core shape (+ icon)
+exports('GetJobDefinition', function(name) return JobRegistry.Get(name) end)
+--- @return table all job definitions keyed by name
+exports('GetJobDefinitions', function() return JobRegistry.All() end)

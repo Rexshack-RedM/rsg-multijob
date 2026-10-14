@@ -3,11 +3,11 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 game 'rdr3'
 
 description 'rsg-multijob'
-version '3.0.0'
+version '3.1.0'
 
 shared_scripts { 
     '@ox_lib/init.lua',
-    'config.lua'
+    'shared/config.lua'
 }
 
 client_scripts { 
@@ -17,7 +17,9 @@ client_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/webhook.lua',
+    'server/jobs.lua',
     'server/server.lua',
+    'server/admin.lua',
     'server/versionchecker.lua'
 }
 
@@ -28,6 +30,8 @@ files {
     'html/index.html',
     'html/style.css',
     'html/script.js',
+    'html/admin.css',
+    'html/admin.js',
 }
 
 server_exports {
@@ -37,6 +41,8 @@ server_exports {
     'HasJob',
     'CanTakeJob',
     'GetJobCount',
+    'GetJobDefinition',
+    'GetJobDefinitions',
 }
 
 lua54 'yes'

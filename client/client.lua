@@ -7,7 +7,7 @@ local uiLocales -- built once, locales don't change at runtime
 local function withIcons(jobs)
     jobs = jobs or {}
     for _, job in ipairs(jobs) do
-        job.icon = Config.JobIcons[job.job] or 'fa-solid fa-briefcase'
+        job.icon = (type(job.icon) == 'string' and job.icon ~= '' and job.icon) or Config.JobIcons[job.job] or 'fa-solid fa-briefcase'
     end
     return jobs
 end
@@ -107,5 +107,72 @@ end)
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName == GetCurrentResourceName() and isUIOpen then
         closeUI()
+    end
+end)
+
+-----------------------------------------------------------------------
+-- Job admin panel (/jobadmin)
+-- All checks happen on the server; these callbacks only relay.
+-----------------------------------------------------------------------
+
+local isAdminOpen = false
+local adminLocales
+
+-- Every adm_ui_* key in locales/en.json is sent to the admin NUI
+local function getAdminLocales()
+    if adminLocales then return adminLocales end
+    adminLocales = {}
+
+    local raw = LoadResourceFile(GetCurrentResourceName(), 'locales/en.json')
+    local ok, keys = pcall(json.decode, raw or '{}')
+    for key in pairs(ok and keys or {}) do
+        if key:sub(1, 7) == 'adm_ui_' then adminLocales[key] = locale(key) end
+    end
+    return adminLocales
+end
+
+local function closeAdmin()
+    isAdminOpen = false
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'admin:close' })
+end
+
+RegisterNetEvent('rsg-multijob:client:openAdmin', function()
+    if isAdminOpen or isUIOpen then return end
+    isAdminOpen = true
+
+    local jobs = lib.callback.await('rsg-multijob:server:admin:getJobs', false)
+    if not jobs or not isAdminOpen then
+        isAdminOpen = false
+        return
+    end
+
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'admin:open', jobs = jobs, locales = getAdminLocales() })
+end)
+
+RegisterNUICallback('admin:close', function(_, cb)
+    closeAdmin()
+    cb('ok')
+end)
+
+RegisterNUICallback('admin:save', function(data, cb)
+    if not isAdminOpen or type(data) ~= 'table' or type(data.job) ~= 'table' then return cb({ ok = false }) end
+    cb(lib.callback.await('rsg-multijob:server:admin:saveJob', false, data.job, data.isNew == true) or { ok = false })
+end)
+
+RegisterNUICallback('admin:delete', function(data, cb)
+    if not isAdminOpen or type(data) ~= 'table' or type(data.name) ~= 'string' then return cb({ ok = false }) end
+    cb(lib.callback.await('rsg-multijob:server:admin:deleteJob', false, data.name) or { ok = false })
+end)
+
+RegisterNUICallback('admin:import', function(_, cb)
+    if not isAdminOpen then return cb({ ok = false }) end
+    cb(lib.callback.await('rsg-multijob:server:admin:importCore', false) or { ok = false })
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName == GetCurrentResourceName() and isAdminOpen then
+        closeAdmin()
     end
 end)

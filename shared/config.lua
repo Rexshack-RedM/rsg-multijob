@@ -3,6 +3,15 @@ RSGCore = exports['rsg-core']:GetCoreObject()
 return {
     MaxJobs = 3,
     JobSwitchCooldown = 3000, -- ms a player must wait between job switches
+
+    -- Job admin panel: create/edit/delete server jobs in-game.
+    -- Job definitions are stored in the `multijob_jobs` table and replace rsg-core/shared/jobs.lua.
+    Admin = {
+        Command = 'jobadmin',
+        Permission = 'admin', -- RSGCore permission level required (god, admin, mod, ...)
+    },
+
+    -- Fallback icons. Jobs created/edited in /jobadmin store their own icon, which takes priority.
     JobIcons = {
         ['vallaw'] = 'fa-solid fa-shield',
         ['rholaw'] = 'fa-solid fa-shield',
@@ -77,6 +86,24 @@ return {
                 URL = '',
                 Title = '🛠️ Job Removed (Admin)',
                 Color = 15105570, -- orange
+            },
+            JobCreated = {
+                Enabled = true,
+                URL = '',
+                Title = '🆕 Job Created',
+                Color = 3066993,
+            },
+            JobUpdated = {
+                Enabled = true,
+                URL = '',
+                Title = '✏️ Job Edited',
+                Color = 3447003,
+            },
+            JobDefinitionDeleted = {
+                Enabled = true,
+                URL = '',
+                Title = '❌ Job Deleted From Server',
+                Color = 15158332,
             },
             EmployeeFired = {
                 Enabled = true,
