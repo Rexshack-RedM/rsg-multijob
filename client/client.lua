@@ -101,7 +101,7 @@ end)
 RegisterNetEvent('RSGCore:Client:OnJobUpdate', function(job)
     if not isUIOpen or not job then return end
 
-    SendNUIMessage({ action = 'updateDuty', onDuty = job.onduty })
+    SendNUIMessage({ action = 'updateDuty', onDuty = job.onduty, currentJob = job.name })
 end)
 
 AddEventHandler('onResourceStop', function(resourceName)

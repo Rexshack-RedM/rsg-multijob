@@ -113,9 +113,9 @@ local function BuildJobList(cid)
 end
 
 -- Sends the current job list to an online player's open menu
-local function PushJobs(Player)
+local function PushJobs(Player, currentJob)
     if not Player then return end
-    TriggerClientEvent('rsg-multijob:client:refreshJobs', Player.PlayerData.source, BuildJobList(Player.PlayerData.citizenid), Player.PlayerData.job.name)
+    TriggerClientEvent('rsg-multijob:client:refreshJobs', Player.PlayerData.source, BuildJobList(Player.PlayerData.citizenid), currentJob or Player.PlayerData.job.name)
 end
 
 -- Offline player: if job is their saved active job, swap it to unemployed
@@ -240,6 +240,7 @@ RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
 
     if readyAt and now < readyAt then
         Notify(src, locale('title_cooldown'), locale('cooldown_desc', math.ceil((readyAt - now) / 1000)), 'warning')
+        PushJobs(Player) -- undo the menu's instant highlight
         return
     end
 
@@ -282,7 +283,7 @@ RegisterNetEvent('rsg-multijob:server:changeJob', function(job)
         }
     })
 
-    PushJobs(Player)
+    PushJobs(Player, job)
 end)
 
 RegisterNetEvent('rsg-multijob:server:deleteJob', function(job)

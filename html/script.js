@@ -240,7 +240,12 @@ function createJobCard(job, isCurrentJob) {
     return card;
 }
 
+let lastJobs = [];
+let lastCurrentJob = null;
+
 function renderJobs(jobs, currentJobName) {
+    lastJobs = jobs || [];
+    lastCurrentJob = currentJobName;
     const container = document.getElementById('jobsContainer');
     container.innerHTML = '';
 
@@ -340,7 +345,10 @@ document.getElementById('switchJobBtn').addEventListener('click', function() {
         t('ui_switch_confirm_title'),
         fmt(t('ui_switch_confirm_text'), selectedJob.jobLabel),
         function() {
-            post('switchJob', { job: selectedJob.job });
+            const newJob = selectedJob.job;
+            post('switchJob', { job: newJob });
+            // Update the highlight straight away; the server refresh confirms it
+            renderJobs(lastJobs, newJob);
             hideConfirm();
             closeChoiceMenu();
         }
@@ -417,6 +425,9 @@ window.addEventListener('message', function(event) {
 
     if (data.action === 'updateDuty') {
         updateDutyStatus(data.onDuty);
+        if (data.currentJob && data.currentJob !== lastCurrentJob) {
+            renderJobs(lastJobs, data.currentJob);
+        }
     }
 
     if (data.action === 'refreshJobs') {
